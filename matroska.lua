@@ -1,15 +1,16 @@
 
-require("io")
+local M = {}
+
 require("pack")
 
 local bpack   = string.pack
 local bunpack = string.unpack
 
 local function hex(s)
- return string.gsub(s,"(.)",function (x) return string.format("%02X",string.byte(x)) end)
+    return string.gsub(s,"(.)",function (x) return string.format("%02X",string.byte(x)) end)
 end
 
-local function ebml_parse_vint(fh, id)
+function M:ebml_parse_vint(fh, id)
     print("reading from:"..fh:seek())
     local byte = fh:read(1)
     --print(hex(byte))
@@ -107,15 +108,15 @@ local master = {
     ["67C8"]     = 1,
 }
 
-local function mkv_open(file)
+function M:open(file)
     print("opening file: "..file)
     -- read until 0x1A, that can be ignored, strip 0x1A too
-    local fh = assert(io.open(file, "r+"))
+    local fh = assert(io.open(file, "r"))
     local f_end = fh:seek("end")
     fh:seek("set")
     while fh:seek() <= f_end  do
-        local id   = ebml_parse_vint(fh, 1)
-        local size = ebml_parse_vint(fh)
+        local id   = M:ebml_parse_vint(fh, 1)
+        local size = M:ebml_parse_vint(fh)
         print('id:'..string.format('%X',id))
         print('size:'..size)
         if not master[string.format('%X', id)] then
@@ -124,8 +125,18 @@ local function mkv_open(file)
         end
     end
     fh:close()
+    local mkv = {}
+    setmetatable(mkv, self)
+    self.__index = self
+    return mkv
 end
 
 
---mkv_open(string.char(58,65,254))
-mkv_open(arg[1])
+if _REQUIREDNAME == nil then
+    matroska = M
+else
+    _G[_REQUIREDNAME] = M
+end
+
+
+return matroska
