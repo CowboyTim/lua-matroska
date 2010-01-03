@@ -10,18 +10,33 @@ end
 
 require("pack")
 
+local time    = os.time
 local bpack   = string.pack
 local bunpack = string.unpack
 local sprintf = string.format
+local subst   = string.gsub
+local ord     = string.byte
+
+-- logging methods
+local oldprint = print
+local function print(...)
+    return oldprint(time(), unpack(arg))
+end
+local debugging = 1
+
+local debug = function (...) end
+if debugging ~= nil then
+    debug = print
+end
 
 local function hex(s)
-    return string.gsub(s,"(.)",function (x) return sprintf("%02X",string.byte(x)) end)
+    return subst(s,"(.)",function (x) return sprintf("%02X",ord(x)) end)
 end
 
 function M:ebml_parse_vint(fh, id)
-    --print("reading from:"..fh:seek())
+    debug("reading from:",fh)
     local byte = fh:read(1)
-    --print(hex(byte))
+    debug(hex(byte))
     local s, size, nrbytes, vint
     s, size = bunpack(byte, '>b')
     if     size > 127 then
@@ -68,7 +83,7 @@ function M:ebml_parse_vint(fh, id)
         nrbytes = 8
     end
     if nrbytes ~= 0 then
-        --print("reading from:"..fh:seek()..',nrbytes:'..nrbytes)
+        debug("reading from:",fh,',nrbytes:',nrbytes)
         s, vint  = bunpack(fh:read(nrbytes), 'A'..nrbytes)
         vint = bpack('b', size)..vint
     else
@@ -86,7 +101,8 @@ function M:ebml_parse_string(fh, size)
 end
 
 function M:ebml_parse_binary(fh, size)
-    return fh:seek("cur", size)
+    fh:seek("cur", size)
+    return nil
 end
 
 function M:ebml_parse_u_integer(fh, size)
@@ -122,23 +138,24 @@ local leafs = require 'matroska_parser_def'
 
 -- define the open: uses leafs as a closure
 function M:open(file)
-    print("opening file: "..file)
-    -- read until 0x1A, that can be ignored, strip 0x1A too
+    debug("opening file: ", file)
     local fh = assert(io.open(file, "r"))
     local f_end = fh:seek("end")
-    print("f_end:"..f_end)
+    debug("f_end:", f_end)
     fh:seek("set")
     local id   = M:ebml_parse_vint(fh, 1)
     local size = M:ebml_parse_vint(fh)
     id = sprintf('%X',id)
-    print('id:'..id..',size:'..size)
+    debug('id:',id,',size:',size)
     while fh:seek() < f_end  do
         local id   = M:ebml_parse_vint(fh, 1)
         local size = M:ebml_parse_vint(fh)
         id = sprintf('%X',id)
-        print('id:'..id..',size:'..size)
-        local a = leafs[id](self, fh, size)
-        print('id:'..id..',size:'..size..',offset:'..fh:seek()..' --> '..(a or ''))
+        local process_element = leafs[id]
+        debug('id:',id,',size:',size)
+        local a = process_element[1](self, fh, size)
+        debug('id:',id,',size:',size,',offset:',fh:seek(),' --> ',a)
+        print(process_element[2], a)
     end
     fh:close()
     local mkv = {}

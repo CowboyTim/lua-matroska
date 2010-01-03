@@ -50,7 +50,8 @@ foreach my $ebml (@list){
     $type =~ s/\W/_/g;
     $type =~ s/__/_/g;
 
-    print 'matroska_parser_def["'.$ebml->{id}.'"]=_G.matroska.ebml_parse_'.$type." -- $desc\n";
+    print 'matroska_parser_def["'.
+        $ebml->{id}.'"]={_G.matroska.ebml_parse_'.$type.",'$ebml->{name}'} -- $desc\n";
 }
 
 print "return matroska_parser_def\n";
