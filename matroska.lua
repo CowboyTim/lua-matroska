@@ -11,21 +11,21 @@ end
 require("pack")
 
 local time    = os.time
-local bpack   = string.pack
 local bunpack = string.unpack
 local sprintf = string.format
 local subst   = string.gsub
 local ord     = string.byte
+local char    = string.char
 
 -- logging methods
-local oldprint = print
-local function print(...)
-    return oldprint(time(), unpack(arg))
-end
-local debugging = 1
+local debugging = nil
 
-local debug = function (...) end
+local debug = function () end
 if debugging ~= nil then
+    local oldprint = print
+    function print(...)
+        return oldprint(time(), unpack(arg))
+    end
     debug = print
 end
 
@@ -35,10 +35,10 @@ end
 
 function M:ebml_parse_vint(fh, id)
     debug("reading from:",fh)
-    local byte = fh:read(1)
-    debug(hex(byte))
-    local s, size, nrbytes, vint
-    s, size = bunpack(byte, '>b')
+    local size = fh:read(1)
+    debug(hex(size))
+    local nrbytes
+    size = ord(size)
     if     size > 127 then
         if not id then
             size = size - 128
@@ -82,12 +82,12 @@ function M:ebml_parse_vint(fh, id)
     else 
         nrbytes = 8
     end
+    local s, vint
     if nrbytes ~= 0 then
         debug("reading from:",fh,',nrbytes:',nrbytes)
-        s, vint  = bunpack(fh:read(nrbytes), 'A'..nrbytes)
-        vint = bpack('b', size)..vint
+        vint = char(size)..fh:read(nrbytes)
     else
-        vint = bpack('b', size)
+        vint = char(size)
     end
     for i=0,(7-#(vint)) do
         vint = '\000'..vint
