@@ -20,7 +20,7 @@ L.unpack = function(format, str)
         local x = substr(format,k,k)
         print('x:'..x)
         local j
-        if     x == 'S' then
+        if     x == 'b' then
             j = i
             print('i:'..i..',j:'..j)
             local s = substr(str,i,j)
@@ -33,6 +33,18 @@ L.unpack = function(format, str)
                 + 256 * 256 * ord(substr(s,2,2))
                 + 256 * ord(substr(s,3,3))
                 + ord(substr(s,4,4))
+        elseif x == 'J' then
+            j = i + 7
+            print('i:'..i..',j:'..j)
+            local s = substr(str,i,j)
+            v =   256 * 256 * 256 * 256 * 256 * 256 * 256 * ord(substr(s,1,1))
+                + 256 * 256 * 256 * 256 * 256 * 256 * ord(substr(s,2,2))
+                + 256 * 256 * 256 * 256 * 256 * ord(substr(s,3,3))
+                + 256 * 256 * 256 * 256 * ord(substr(s,4,4))
+                + 256 * 256 * 256 * ord(substr(s,5,5))
+                + 256 * 256 * ord(substr(s,6,6))
+                + 256 * ord(substr(s,7,7))
+                + ord(substr(s,8,8))
         end
         push(t,v)
         i = j+1
