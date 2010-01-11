@@ -92,7 +92,7 @@ function M:ebml_parse_vint(fh, id)
     for i=0,(7-#(vint)) do
         vint = '\000'..vint
     end
-    s, vint  = bunpack(vint, '>J')
+    s, vint  = bunpack(vint, '>Q')
     return vint
 end
 

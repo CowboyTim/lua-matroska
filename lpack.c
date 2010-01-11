@@ -24,8 +24,8 @@
 #define	OP_UINT		'I'		/* unsigned int */
 #define	OP_LONG		'l'		/* long */
 #define	OP_ULONG	'L'		/* unsigned long */
-#define	OP_LONGLONG	'j'		/* long long */
-#define	OP_ULONGLONG	'J'		/* unsigned long long */
+#define	OP_LONGLONG	'q'		/* long long */
+#define	OP_ULONGLONG	'Q'		/* unsigned long long */
 #define	OP_LITTLEENDIAN	'<'		/* little endian */
 #define	OP_BIGENDIAN	'>'		/* big endian */
 #define	OP_NATIVE	'='		/* native endian */
@@ -155,14 +155,14 @@ static int l_unpack(lua_State *L) 		/** unpack(s,f,[init]) */
    UNPACKNUMBER(OP_FLOAT, float)
    UNPACKNUMBER(OP_CHAR, char)
    UNPACKNUMBER(OP_BYTE, unsigned char)
-   UNPACKNUMBER(OP_SHORT, short)
-   UNPACKNUMBER(OP_USHORT, unsigned short)
+   UNPACKNUMBER(OP_SHORT, int16_t)
+   UNPACKNUMBER(OP_USHORT, uint16_t)
    UNPACKNUMBER(OP_INT, int)
    UNPACKNUMBER(OP_UINT, unsigned int)
    UNPACKNUMBER(OP_LONG, int32_t)
    UNPACKNUMBER(OP_ULONG, uint32_t)
-   UNPACKNUMBER(OP_LONGLONG, long long)
-   UNPACKNUMBER(OP_ULONGLONG, unsigned long long)
+   UNPACKNUMBER(OP_LONGLONG, int64_t)
+   UNPACKNUMBER(OP_ULONGLONG, uint64_t)
    case ' ': case ',':
     break;
    default:
@@ -239,14 +239,14 @@ static int l_pack(lua_State *L) 		/** pack(f,...) */
    PACKNUMBER(OP_FLOAT, float)
    PACKNUMBER(OP_CHAR, char)
    PACKNUMBER(OP_BYTE, unsigned char)
-   PACKNUMBER(OP_SHORT, short)
-   PACKNUMBER(OP_USHORT, unsigned short)
+   PACKNUMBER(OP_SHORT, int16_t)
+   PACKNUMBER(OP_USHORT, uint16_t)
    PACKNUMBER(OP_INT, int)
    PACKNUMBER(OP_UINT, unsigned int)
    PACKNUMBER(OP_LONG, int32_t)
    PACKNUMBER(OP_ULONG, uint32_t)
-   PACKNUMBER(OP_LONGLONG, long long)
-   PACKNUMBER(OP_ULONGLONG, unsigned long long)
+   PACKNUMBER(OP_LONGLONG, int64_t)
+   PACKNUMBER(OP_ULONGLONG, uint64_t)
    case ' ': case ',':
     break;
    default:
