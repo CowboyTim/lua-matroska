@@ -105,21 +105,27 @@ function M:ebml_parse_binary(fh, size)
     return size
 end
 
-function M:ebml_parse_u_integer(fh, size)
-    local s, uint = 1, fh:read(size)
-    for i=0,(3-#(uint)) do
-        uint = '\000'..uint
+function M:ebml_parse_date(fh, size)
+    local s, f = 1, fh:read(size)
+    for i=0,(7-#(f)) do
+        f = '\000'..f
     end
-    s, uint = bunpack(uint, '>L')
-    return uint
+    s, f = bunpack(f, '>q')
+
+    -- FIXME: not possible within LUA I think. This is a 64-bit signed integer:
+    --        nanoseconds since 2001-01-01T00:00:00,000000000 
+    --        so, This is 1 day off.. on the file I got :-)
+
+    s = os.time({year = 2001, month = 1, day = 1})
+    return os.date("%c", s + f/1000000000)
 end
 
-function M:ebml_parse_float(fh, size)
+local function ebml_parse_quad(fh, size, what)
     local s, f = 1, fh:read(size)
     for i=0,(3-#(f)) do
         f = '\000'..f
     end
-    s, f = bunpack(f, '>f')
+    s, f = bunpack(f, what)
     return f
 end
 
@@ -127,11 +133,21 @@ function M:ebml_parse_sub_elements(fh, size)
     return '<node>'
 end
 
+function M:ebml_parse_float (fh, size)
+    return ebml_parse_quad(fh, size, '>f')
+end
+
+function M:ebml_parse_u_integer (fh, size)
+    return ebml_parse_quad(fh, size, '>L')
+end
+
+function M:ebml_parse_s_integer (fh, size)
+    return ebml_parse_quad(fh, size, '>l')
+end
+
 M.ebml_parse_utf_8            = M.ebml_parse_string
-M.ebml_parse_date             = M.ebml_parse_u_integer
 M.ebml_parse_u_integer_1_bit_ = M.ebml_parse_u_integer
 M.ebml_parse_binary_see_      = M.ebml_parse_binary
-M.ebml_parse_s_integer        = M.ebml_parse_u_integer
 
 -- add the other parser defs: after all the parser defs defined above always!
 local leafs = require 'matroska_parser_def'
