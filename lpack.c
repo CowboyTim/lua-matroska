@@ -32,6 +32,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "lua.h"
 #include "lualib.h"
@@ -158,8 +159,8 @@ static int l_unpack(lua_State *L) 		/** unpack(s,f,[init]) */
    UNPACKNUMBER(OP_USHORT, unsigned short)
    UNPACKNUMBER(OP_INT, int)
    UNPACKNUMBER(OP_UINT, unsigned int)
-   UNPACKNUMBER(OP_LONG, long)
-   UNPACKNUMBER(OP_ULONG, unsigned long)
+   UNPACKNUMBER(OP_LONG, int32_t)
+   UNPACKNUMBER(OP_ULONG, uint32_t)
    UNPACKNUMBER(OP_LONGLONG, long long)
    UNPACKNUMBER(OP_ULONGLONG, unsigned long long)
    case ' ': case ',':
@@ -242,8 +243,8 @@ static int l_pack(lua_State *L) 		/** pack(f,...) */
    PACKNUMBER(OP_USHORT, unsigned short)
    PACKNUMBER(OP_INT, int)
    PACKNUMBER(OP_UINT, unsigned int)
-   PACKNUMBER(OP_LONG, long)
-   PACKNUMBER(OP_ULONG, unsigned long)
+   PACKNUMBER(OP_LONG, int32_t)
+   PACKNUMBER(OP_ULONG, uint32_t)
    PACKNUMBER(OP_LONGLONG, long long)
    PACKNUMBER(OP_ULONGLONG, unsigned long long)
    case ' ': case ',':
