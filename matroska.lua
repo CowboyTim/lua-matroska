@@ -102,7 +102,7 @@ end
 
 function M:ebml_parse_binary(fh, size)
     fh:seek("cur", size)
-    return nil
+    return size
 end
 
 function M:ebml_parse_u_integer(fh, size)
@@ -124,7 +124,7 @@ function M:ebml_parse_float(fh, size)
 end
 
 function M:ebml_parse_sub_elements(fh, size)
-    return nil
+    return '<node>'
 end
 
 M.ebml_parse_utf_8            = M.ebml_parse_string
