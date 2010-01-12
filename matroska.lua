@@ -157,18 +157,18 @@ M.ebml_parse_binary_see_      = M.ebml_parse_binary
 -- add the other parser defs: after all the parser defs defined above always!
 local leafs = require 'matroska_parser_def'
 
--- define the open: uses leafs as a closure
-function M:open(file)
-    debug("opening file: ", file)
-    local fh = assert(io.open(file, "r"))
-    local f_end = fh:seek("end")
-    debug("f_end:", f_end)
-    fh:seek("set")
-    local id   = M:ebml_parse_vint(fh, 1)
-    local size = M:ebml_parse_vint(fh)
-    id = sprintf('%X',id)
-    debug('id:',id,',size:',size)
-    while fh:seek() < f_end  do
+function M:iterator()
+    return self.iterate, self
+end
+
+function M:info()
+    self.fh:seek("set")
+    return self:iterator()
+end
+
+function M:iterate()
+    local fh = self.fh
+    while fh:seek() < self.f_end  do
         local id   = M:ebml_parse_vint(fh, 1)
         local size = M:ebml_parse_vint(fh)
         id = sprintf('%X',id)
@@ -176,14 +176,34 @@ function M:open(file)
         debug('id:',id,',size:',size)
         local a = process_element[1](self, fh, size)
         debug('id:',id,',size:',size,',offset:',fh:seek(),' --> ',a)
-        print(process_element[2], a)
+        return process_element[2], a
     end
-    fh:close()
+    return nil
+end
+
+-- define the open: uses leafs as a closure
+function M:open(file)
     local mkv = {}
     setmetatable(mkv, self)
     self.__index = self
+    debug("opening file: ", file)
+    local fh = assert(io.open(file, "r"))
+    local f_end = fh:seek("end")
+    mkv.f_end = f_end
+    mkv.fh    = fh
+    debug("f_end:", f_end)
+    fh:seek("set")
+    for w, r in mkv:iterator(mkv) do
+        mkv[w] = r
+        if w == 'Cluster' then
+            break
+        end
+    end
     return mkv
 end
 
+function M:close()
+    return self.fh:close()
+end
 
 return matroska
