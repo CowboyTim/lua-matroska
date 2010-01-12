@@ -10,12 +10,16 @@ end
 
 require("pack")
 
-local time    = os.time
-local bunpack = string.unpack
-local sprintf = string.format
-local subst   = string.gsub
-local ord     = string.byte
-local char    = string.char
+local time     = os.time
+local bunpack  = string.unpack
+local sprintf  = string.format
+local subst    = string.gsub
+local ord      = string.byte
+local char     = string.char
+local strftime = os.date
+
+-- common stuff
+local start = time({year = 2001, month = 1, day = 1})
 
 -- logging methods
 local debugging = nil
@@ -110,14 +114,15 @@ function M:ebml_parse_date(fh, size)
     for i=0,(7-#(f)) do
         f = '\000'..f
     end
-    s, f = bunpack(f, '>q')
+    debug('date:'..hex(f))
+    s, f = bunpack(string.sub(f,1,4), '>l')
 
     -- FIXME: not possible within LUA I think. This is a 64-bit signed integer:
     --        nanoseconds since 2001-01-01T00:00:00,000000000 
-    --        so, This is 1 day off.. on the file I got :-)
+    --        so, I use only the most 4 significant bytes, hence, I don't
+    --        divide by 1000000000, but I also multiplicate with 4**32.
 
-    s = os.time({year = 2001, month = 1, day = 1})
-    return os.date("%c", s + f/1000000000)
+    return strftime("!%c", start + f*4.294967296)
 end
 
 local function ebml_parse_quad(fh, size, what)
