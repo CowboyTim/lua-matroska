@@ -11,62 +11,42 @@ local function hex(s)
     return subst(s,"(.)",function (x) return sprintf("%02X",ord(x)) end)
 end
 
+local function dump(t)
+    for i,v in ipairs(t) do
+        print(i..':'..v)
+    end
+end
+
 
 L.unpack = function(format, str)
 
     local i = 1
+    local v
     local t = {}
     for k=1,#(format) do
-        local x = substr(format,k,k)
-        print('x:'..x)
-        local j
-        if     x == 'b' then
-            j = i
-            print('i:'..i..',j:'..j)
-            local s = substr(str,i,j)
-            v = ord(s)
-        elseif x == 'L' then
-            j = i + 3
-            print('i:'..i..',j:'..j)
-            local s = substr(str,i,j)
-            v =   256 * 256 * 256 * ord(substr(s,1,1))
-                + 256 * 256 * ord(substr(s,2,2))
-                + 256 * ord(substr(s,3,3))
-                + ord(substr(s,4,4))
-        elseif x == 'J' then
-            j = i + 7
-            print('i:'..i..',j:'..j)
-            local s = substr(str,i,j)
-            v =   256 * 256 * 256 * 256 * 256 * 256 * 256 * ord(substr(s,1,1))
-                + 256 * 256 * 256 * 256 * 256 * 256 * ord(substr(s,2,2))
-                + 256 * 256 * 256 * 256 * 256 * ord(substr(s,3,3))
-                + 256 * 256 * 256 * 256 * ord(substr(s,4,4))
-                + 256 * 256 * 256 * ord(substr(s,5,5))
-                + 256 * 256 * ord(substr(s,6,6))
-                + 256 * ord(substr(s,7,7))
-                + ord(substr(s,8,8))
+        v = substr(format,k,k)
+        if     v == 'b' then
+            v = ord(str, i, i)
+            i = i+1
+        elseif v == 'L' then
+            v = {ord(str, i, i+3)}
+            v = 256 * ( 256 * ( 256 * v[1] + v[2] ) + v[2]) + v[4]
+            i = i+4
+            
+        elseif v == 'Q' then
+            v = {ord(str, i, i+7)}
+            v = 256 * ( 
+                256 * ( 
+                256 * (
+                256 * ( 
+                256 * ( 
+                256 * ( 
+                256 * v[1] + v[2] ) + v[2]) + v[4] ) + v[5] ) + v[6]) + v[7]) + v[8]
+            i = i+8
         end
         push(t,v)
-        i = j+1
     end
 
-    print(newformat)
-
---    subst(str,newformat,function (...) 
---        for i,x in ipairs(arg) do
---            print('length:'..#(x)..',s:'..hex(x))
---            local v
---            if     #(x) == 1 then
---                v = ord(x)
---            elseif #(x) == 4 then
---                v =   256 * 256 * 256 * ord(substr(x,1,1))
---                    + 256 * 256 * ord(substr(x,2,2))
---                    + 256 * ord(substr(x,3,3))
---                    + ord(substr(x,4,4))
---            end
---            push(t,v)
---        end
---    end)
     return t
 end
 
