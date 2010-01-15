@@ -106,7 +106,7 @@ end
 
 function M:ebml_parse_binary(fh, size)
     fh:seek("cur", size)
-    return size
+    return 'size:'..size
 end
 
 function M:ebml_parse_date(fh, size)
@@ -154,8 +154,15 @@ M.ebml_parse_utf_8            = M.ebml_parse_string
 M.ebml_parse_u_integer_1_bit_ = M.ebml_parse_u_integer
 M.ebml_parse_binary_see_      = M.ebml_parse_binary
 
+function M:ebml_parse_SeekID(fh, size)
+    return M.leafs[sprintf('%X',M:ebml_parse_vint(fh, 1))][2]
+end
+
 -- add the other parser defs: after all the parser defs defined above always!
-local leafs = require 'matroska_parser_def'
+M.leafs = require 'matroska_parser_def'
+
+-- SeekID is special.
+M.leafs["53AB"][1] = M.ebml_parse_SeekID
 
 function M:iterator()
     return self.iterate, self
@@ -172,7 +179,7 @@ function M:iterate()
         local id   = M:ebml_parse_vint(fh, 1)
         local size = M:ebml_parse_vint(fh)
         id = sprintf('%X',id)
-        local process_element = leafs[id]
+        local process_element = M.leafs[id]
         debug('id:',id,',size:',size)
         local a = process_element[1](self, fh, size)
         debug('id:',id,',size:',size,',offset:',fh:seek(),' --> ',a)
