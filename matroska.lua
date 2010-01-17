@@ -17,6 +17,7 @@ local ord      = string.byte
 local char     = string.char
 local strftime = os.date
 local substr   = string.sub
+local stringx  = string.rep
 
 -- common stuff
 local start = time({year = 2001, month = 1, day = 1})
@@ -38,15 +39,12 @@ local function hex(s)
 end
 
 local bunpack = function(str, format)
-    local i = 3
+    local i = 4
     local f = substr(format, 2, 2)
     if f == 'Q' or f == 'q' then
-        i = 7
+        i = 8
     end
-    for i=0,(i-#(str)) do
-        str = '\000'..str
-    end
-    local s, v = bunpack(str, format)
+    local s, v = bunpack(stringx('\000', i-#(str))..str, format)
     return v
 end
 
