@@ -17,6 +17,7 @@ local subst    = string.gsub
 local ord      = string.byte
 local char     = string.char
 local strftime = os.date
+local substr   = string.sub
 
 -- common stuff
 local start = time({year = 2001, month = 1, day = 1})
@@ -35,6 +36,19 @@ end
 
 local function hex(s)
     return subst(s,"(.)",function (x) return sprintf("%02X",ord(x)) end)
+end
+
+local bunpack = function(str, format)
+    local i = 3
+    local f = substr(format, 2, 2)
+    if f == 'Q' or f == 'q' then
+        i = 7
+    end
+    for i=0,(i-#(str)) do
+        str = '\000'..str
+    end
+    local s, v = bunpack(str, format)
+    return v
 end
 
 function M:ebml_parse_vint(fh, id)
@@ -93,11 +107,7 @@ function M:ebml_parse_vint(fh, id)
     else
         vint = char(size)
     end
-    for i=0,(7-#(vint)) do
-        vint = '\000'..vint
-    end
-    s, vint  = bunpack(vint, '>Q')
-    return vint
+    return bunpack(vint, '>Q')
 end
 
 function M:ebml_parse_string(fh, size)
@@ -110,12 +120,7 @@ function M:ebml_parse_binary(fh, size)
 end
 
 function M:ebml_parse_date(fh, size)
-    local s, f = 1, fh:read(size)
-    for i=0,(7-#(f)) do
-        f = '\000'..f
-    end
-    debug('date:'..hex(f))
-    s, f = bunpack(string.sub(f,1,4), '>l')
+    local f = bunpack(string.sub(fh:read(size),1,4), '>l')
 
     -- FIXME: not possible within LUA I think. This is a 64-bit signed integer:
     --        nanoseconds since 2001-01-01T00:00:00,000000000 
@@ -125,29 +130,20 @@ function M:ebml_parse_date(fh, size)
     return strftime("!%c", start + f*4.294967296)
 end
 
-local function ebml_parse_quad(fh, size, what)
-    local s, f = 1, fh:read(size)
-    for i=0,(3-#(f)) do
-        f = '\000'..f
-    end
-    s, f = bunpack(f, what)
-    return f
-end
-
 function M:ebml_parse_sub_elements(fh, size)
     return '<node>'
 end
 
-function M:ebml_parse_float (fh, size)
-    return ebml_parse_quad(fh, size, '>f')
+function M:ebml_parse_float(fh, size)
+    return bunpack(fh:read(size), '>f')
 end
 
-function M:ebml_parse_u_integer (fh, size)
-    return ebml_parse_quad(fh, size, '>L')
+function M:ebml_parse_u_integer(fh, size)
+    return bunpack(fh:read(size), '>Q')
 end
 
-function M:ebml_parse_s_integer (fh, size)
-    return ebml_parse_quad(fh, size, '>l')
+function M:ebml_parse_s_integer(fh, size)
+    return bunpack(fh:read(size), '>q')
 end
 
 M.ebml_parse_utf_8            = M.ebml_parse_string
