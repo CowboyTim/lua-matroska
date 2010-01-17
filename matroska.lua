@@ -213,7 +213,7 @@ function M:open(file)
     mkv.fh    = fh
     debug("f_end:", f_end)
     fh:seek("set")
-    for w, r in mkv:iterator(mkv) do
+    for w, r in mkv:iterator() do
         mkv[w] = r
         if w == 'Cluster' then
             break
