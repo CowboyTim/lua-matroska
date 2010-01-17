@@ -51,7 +51,7 @@ local bunpack = function(str, format)
     return v
 end
 
-function M:ebml_parse_vint(fh, id)
+local function ebml_parse_vint(fh, id)
     debug("reading from:",fh)
     local size = fh:read(1)
     debug(hex(size))
@@ -110,6 +110,12 @@ function M:ebml_parse_vint(fh, id)
     return bunpack(vint, '>Q')
 end
 
+--[[
+    
+    different type element parser functions
+
+--]]
+
 function M:ebml_parse_string(fh, size)
     return fh:read(size)
 end
@@ -151,14 +157,26 @@ M.ebml_parse_u_integer_1_bit_ = M.ebml_parse_u_integer
 M.ebml_parse_binary_see_      = M.ebml_parse_binary
 
 function M:ebml_parse_SeekID(fh, size)
-    return M.leafs[sprintf('%X',M:ebml_parse_vint(fh, 1))][2]
+    return M.leafs[sprintf('%X',ebml_parse_vint(fh, 1))][2]
 end
+
+--[[
+
+    parser definition: ID to function mapping
+
+--]]
 
 -- add the other parser defs: after all the parser defs defined above always!
 M.leafs = require 'matroska_parser_def'
 
--- SeekID is special.
+-- SeekID is special, override it.
 M.leafs["53AB"][1] = M.ebml_parse_SeekID
+
+--[[
+
+    parser API
+
+--]]
 
 function M:iterator()
     return self.iterate, self
@@ -172,8 +190,8 @@ end
 function M:iterate()
     local fh = self.fh
     while fh:seek() < self.f_end  do
-        local id   = M:ebml_parse_vint(fh, 1)
-        local size = M:ebml_parse_vint(fh)
+        local id   = ebml_parse_vint(fh, 1)
+        local size = ebml_parse_vint(fh)
         id = sprintf('%X',id)
         local process_element = M.leafs[id]
         debug('id:',id,',size:',size)
