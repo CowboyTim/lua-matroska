@@ -1,12 +1,11 @@
 
 local M = {}
 
--- add to GLOBAL
+-- add to GLOBAL, else the require of matroska_parser_def.lua won't work
 if _REQUIREDNAME == nil then
-    matroska = M
-else
-    _G[_REQUIREDNAME] = M
+    _REQUIREDNAME = 'matroska'
 end
+_G[_REQUIREDNAME] = M
 
 require("pack")
 
@@ -100,7 +99,7 @@ local function ebml_parse_vint(fh, id)
     else 
         nrbytes = 8
     end
-    local s, vint
+    local vint
     if nrbytes ~= 0 then
         debug("reading from:",fh,',nrbytes:',nrbytes)
         vint = char(size)..fh:read(nrbytes)
@@ -227,4 +226,4 @@ function M:close()
     return self.fh:close()
 end
 
-return matroska
+return M
