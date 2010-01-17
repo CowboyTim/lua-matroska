@@ -125,10 +125,12 @@ end
 function M:ebml_parse_date(fh, size)
     local f = bunpack(string.sub(fh:read(size),1,4), '>l')
 
-    -- FIXME: not possible within LUA I think. This is a 64-bit signed integer:
-    --        nanoseconds since 2001-01-01T00:00:00,000000000 
-    --        so, I use only the most 4 significant bytes, hence, I don't
-    --        divide by 1000000000, but I also multiplicate with 4**32.
+    --[[
+    FIXME: not possible within LUA I think. This is a 64-bit signed integer:
+           nanoseconds since 2001-01-01T00:00:00,000000000 
+           so, I use only the most 4 significant bytes, hence, I don't
+           divide by 1000000000, but I also multiplicate with 4**32.
+    --]]
 
     return strftime("!%c", start + f*4.294967296)
 end
