@@ -18,6 +18,9 @@ local char     = string.char
 local strftime = os.date
 local substr   = string.sub
 local stringx  = string.rep
+local push     = table.insert
+local pop      = table.remove
+local join     = table.concat
 
 -- common stuff
 local start = time({year = 2001, month = 1, day = 1})
@@ -136,7 +139,7 @@ function M:ebml_parse_date(fh, size)
 end
 
 function M:ebml_parse_sub_elements(fh, size)
-    return '<node>'
+    return nil
 end
 
 function M:ebml_parse_float(fh, size)
@@ -196,10 +199,12 @@ function M:iterate()
         debug('id:',id,',size:',size)
         local a = process_element[1](self, fh, size)
         debug('id:',id,',size:',size,',offset:',fh:seek(),' --> ',a)
-        return process_element[2], a
+        return process_element[2], a, process_element[3]
     end
     return nil
 end
+
+local element_array = { TrackEntry = 0, Seek = 0 }
 
 -- define the open: uses leafs as a closure
 function M:open(file)
@@ -213,8 +218,29 @@ function M:open(file)
     mkv.fh    = fh
     debug("f_end:", f_end)
     fh:seek("set")
-    for w, r in mkv:iterator() do
-        mkv[w] = r
+    local header    = {}
+    local stack     = {}
+    local lastlevel = 0
+    for w, r, l in mkv:iterator() do
+        debug('w:'..w..',r:'..(r or 'NIL')..',l:'..(l or 'NIL')..',lastl:'..lastlevel..':'..join(stack, '#'))
+        if l < lastlevel then
+            debug("LESS")
+            for i=l+1,lastlevel do
+                debug("POP")
+                pop(stack)
+            end
+        end
+        if r == nil then
+            debug("NIL")
+            if element_array[w] ~= nil then
+                element_array[w] = element_array[w] + 1
+                w = w..element_array[w]
+            end
+            push(stack, w)
+        else
+            header[join(stack, '/')..'/'..w] = r
+        end
+        lastlevel = l
         if w == 'Cluster' then
             break
         end
