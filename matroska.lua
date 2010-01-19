@@ -234,7 +234,7 @@ function M:open(file)
             debug("NIL")
             if element_array[w] ~= nil then
                 element_array[w] = element_array[w] + 1
-                w = w..element_array[w]
+                w = w..'/'..element_array[w]
             end
             push(stack, w)
         else
@@ -245,6 +245,8 @@ function M:open(file)
             break
         end
     end
+
+    mkv.header = header
     return mkv
 end
 
