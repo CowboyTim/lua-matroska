@@ -49,7 +49,7 @@ local bunpack = function(str, format)
         i = 8
     end
     local s, v = bunpack(stringx('\000', i-#(str))..str, format)
-    return v
+    return tonumber(v)
 end
 
 local function ebml_parse_vint(fh, id)
