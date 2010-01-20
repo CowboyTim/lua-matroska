@@ -123,7 +123,7 @@ end
 
 function M:ebml_parse_binary(fh, size)
     fh:seek("cur", size)
-    return 'size:'..size
+    return size
 end
 
 function M:ebml_parse_date(fh, size)
@@ -186,7 +186,7 @@ function M:iterator()
 end
 
 function M:info()
-    self.fh:seek("set")
+    self:reset()
     return self:iterator()
 end
 
@@ -285,6 +285,10 @@ end
 
 function M:close()
     return self.fh:close()
+end
+
+function M:reset()
+    return self.fh:seek("set")
 end
 
 return M

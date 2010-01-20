@@ -16,6 +16,13 @@ if arg[1] == 'tracks' then
     for k,v in pairs(t or {}) do
         print(k,v)
     end
+
+    m:reset()
+    for k,v,l in m:iterator() do
+        if k == 'Block' then
+            print(k,v)
+        end
+    end
 end
 
 m:close()
