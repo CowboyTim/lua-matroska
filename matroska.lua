@@ -21,6 +21,7 @@ local stringx  = string.rep
 local push     = table.insert
 local pop      = table.remove
 local join     = table.concat
+local match    = string.match
 
 -- common stuff
 local start = time({year = 2001, month = 1, day = 1})
@@ -255,7 +256,7 @@ function M:grepinfo(what)
                 return nil
             end
             if what ~= nil then
-                m = {string.match(k, what)}
+                m = {match(k, what)}
                 if #m > 0 then
                     return k,v,unpack(m)
                 end
