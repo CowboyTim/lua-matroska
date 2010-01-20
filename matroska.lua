@@ -222,16 +222,12 @@ function M:open(file)
     local stack     = {}
     local lastlevel = 0
     for w, r, l in mkv:iterator() do
-        debug('w:'..w..',r:'..(r or 'NIL')..',l:'..(l or 'NIL')..',lastl:'..lastlevel..':'..join(stack, '#'))
         if l < lastlevel then
-            debug("LESS")
             for i=l+1,lastlevel do
-                debug("POP")
                 pop(stack)
             end
         end
         if r == nil then
-            debug("NIL")
             if element_array[w] ~= nil then
                 element_array[w] = element_array[w] + 1
                 w = w..'/'..element_array[w]
@@ -249,6 +245,42 @@ function M:open(file)
     mkv.header = header
     return mkv
 end
+
+function M:grepinfo(what)
+    return function (h, k)
+        local v, m
+        while 1 do
+            k,v = next(h, k)
+            if k == nil then
+                return nil
+            end
+            if what ~= nil then
+                m = {string.match(k, what)}
+                if #m > 0 then
+                    return k,v,unpack(m)
+                end
+            else
+                return k,v
+            end
+        end
+    end, self.header
+end
+
+function M:multi(what)
+    local multi = {}
+    for _,v,m,k in self:grepinfo(what..'/(%d)/(.*)') do
+        if multi[m] == nil then
+            multi[m] = {}
+        end
+        multi[m][k] = v
+    end
+    return multi
+end
+
+function M:tracks(what)
+    return self:multi('Segment/Tracks/TrackEntry')
+end
+
 
 function M:close()
     return self.fh:close()
