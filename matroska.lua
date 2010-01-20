@@ -27,7 +27,7 @@ local match    = string.match
 local start = time({year = 2001, month = 1, day = 1})
 
 -- logging methods
-local debugging = nil
+local debugging = 1
 
 local debug = function () end
 if debugging ~= nil then
@@ -117,13 +117,37 @@ end
 
 --]]
 
+local function testflag(b, flag)
+  return b % (2*flag) >= flag
+end
+
 function M:ebml_parse_string(fh, size)
     return fh:read(size)
 end
 
 function M:ebml_parse_binary(fh, size)
+    local cur = fh:seek()
+    local tracknr  = ebml_parse_vint(fh, nil)
+    local timecode = bunpack(fh:read(2), '>q')
+    local flags    = ord(fh:read(1))
+    local lacing   = 0 
+    if testflag(flags,6) then
+        lacing = 2
+    end
+    if testflag(flags,5) then
+        lacing = lacing + 1
+    end
+    if lacing then
+        nrlace = ord(fh:read(1))
+    end
+    debug("size"    , size,
+          "tracknr" , tracknr,
+          "timecode", timecode,
+          "flags"   , flags,
+          "nrlace"  , nrlace)
+    fh:seek("set", cur)
     fh:seek("cur", size)
-    return size
+    return tracknr, timecode, size
 end
 
 function M:ebml_parse_date(fh, size)
@@ -281,7 +305,6 @@ end
 function M:tracks(what)
     return self:multi('Segment/Tracks/TrackEntry')
 end
-
 
 function M:close()
     return self.fh:close()
