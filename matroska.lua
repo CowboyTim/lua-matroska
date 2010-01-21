@@ -27,7 +27,7 @@ local match    = string.match
 local start = time({year = 2001, month = 1, day = 1})
 
 -- logging methods
-local debugging = 1
+local debugging = nil
 
 local debug = function () end
 if debugging ~= nil then
@@ -118,7 +118,7 @@ end
 --]]
 
 local function testflag(b, flag)
-  return b % (2*flag) >= flag
+    return b % (2*flag) >= flag
 end
 
 function M:ebml_parse_string(fh, size)
@@ -126,7 +126,7 @@ function M:ebml_parse_string(fh, size)
 end
 
 function M:ebml_parse_binary(fh, size)
-    local cur = fh:seek()
+    local start_f  = fh:seek()
     local tracknr  = ebml_parse_vint(fh, nil)
     local timecode = bunpack(fh:read(2), '>q')
     local flags    = ord(fh:read(1))
@@ -137,17 +137,18 @@ function M:ebml_parse_binary(fh, size)
     if testflag(flags,5) then
         lacing = lacing + 1
     end
-    if lacing then
+    if lacing ~= 0 then
         nrlace = ord(fh:read(1))
     end
     debug("size"    , size,
           "tracknr" , tracknr,
           "timecode", timecode,
           "flags"   , flags,
+          "lacing"  , lacing,
           "nrlace"  , nrlace)
-    fh:seek("set", cur)
-    fh:seek("cur", size)
-    return tracknr, timecode, size
+    local cur = fh:seek()
+    fh:seek("set", start_f + size)
+    return tracknr, timecode, cur, (size - (cur - start_f))
 end
 
 function M:ebml_parse_date(fh, size)
@@ -222,9 +223,9 @@ function M:iterate()
         id = sprintf('%X',id)
         local process_element = M.leafs[id]
         debug('id:',id,',size:',size)
-        local a = process_element[1](self, fh, size)
-        debug('id:',id,',size:',size,',offset:',fh:seek(),' --> ',a)
-        return process_element[2], a, process_element[3]
+        local a,b,c,d = process_element[1](self, fh, size)
+        debug('id:',id,',size:',size,',offset:',fh:seek(),' --> ',a,b,c,d)
+        return process_element[2], process_element[3], a,b,c,d
     end
     return nil
 end
@@ -246,7 +247,7 @@ function M:open(file)
     local header    = {}
     local stack     = {}
     local lastlevel = 0
-    for w, r, l in mkv:iterator() do
+    for w, l, r in mkv:iterator() do
         if l < lastlevel then
             for i=l+1,lastlevel do
                 pop(stack)
@@ -312,6 +313,11 @@ end
 
 function M:reset()
     return self.fh:seek("set")
+end
+
+function M:read(pos, size)
+    self.fh:seek("set", pos)
+    return self.fh:read(size)
 end
 
 return M

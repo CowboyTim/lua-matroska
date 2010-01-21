@@ -17,12 +17,16 @@ if arg[1] == 'tracks' then
         print(k,v)
     end
 
+    local fh = io.open('/var/tmp/aa','w')
     m:reset()
-    for k,v,l in m:iterator() do
-        if k == 'Block' then
-            print(k,v)
+    for k,l,t,timecode,pos,size in m:iterator() do
+        if k == 'Block' and t == tracknr then
+            print(k,t,timecode,pos,size)
+            local data = m:read(pos, size)
+            fh:write(data)
         end
     end
+    fh:close()
 end
 
 m:close()
