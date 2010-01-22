@@ -3,7 +3,7 @@ local M = {}
 
 -- add to GLOBAL, else the require of matroska_parser_def.lua won't work
 if _REQUIREDNAME == nil then
-    _REQUIREDNAME = 'matroska'
+    _REQUIREDNAME = "matroska"
 end
 _G[_REQUIREDNAME] = M
 
@@ -45,10 +45,10 @@ end
 local bunpack = function(str, format)
     local i = 4
     local f = substr(format, 2, 2)
-    if f == 'Q' or f == 'q' then
+    if f == "Q" or f == "q" then
         i = 8
     end
-    local s, v = bunpack(stringx('\000', i-#(str))..str, format)
+    local s, v = bunpack(stringx("\000", i-#(str))..str, format)
     return tonumber(v)
 end
 
@@ -103,12 +103,12 @@ local function ebml_parse_vint(fh, id)
     end
     local vint
     if nrbytes ~= 0 then
-        debug("reading from:",fh,',nrbytes:',nrbytes)
+        debug("reading from:",fh,",nrbytes:",nrbytes)
         vint = char(size)..fh:read(nrbytes)
     else
         vint = char(size)
     end
-    return bunpack(vint, '>Q')
+    return bunpack(vint, ">Q")
 end
 
 --[[
@@ -128,7 +128,7 @@ end
 function M:ebml_parse_binary(fh, size)
     local start_f  = fh:seek()
     local tracknr  = ebml_parse_vint(fh, nil)
-    local timecode = bunpack(fh:read(2), '>q')
+    local timecode = bunpack(fh:read(2), ">q")
     local flags    = ord(fh:read(1))
     local lacing   = 0 
     if testflag(flags,6) then
@@ -152,7 +152,7 @@ function M:ebml_parse_binary(fh, size)
 end
 
 function M:ebml_parse_date(fh, size)
-    local f = bunpack(string.sub(fh:read(size),1,4), '>l')
+    local f = bunpack(string.sub(fh:read(size),1,4), ">l")
 
     --[[
     FIXME: not possible within LUA I think. This is a 64-bit signed integer:
@@ -169,15 +169,15 @@ function M:ebml_parse_sub_elements(fh, size)
 end
 
 function M:ebml_parse_float(fh, size)
-    return bunpack(fh:read(size), '>f')
+    return bunpack(fh:read(size), ">f")
 end
 
 function M:ebml_parse_u_integer(fh, size)
-    return bunpack(fh:read(size), '>Q')
+    return bunpack(fh:read(size), ">Q")
 end
 
 function M:ebml_parse_s_integer(fh, size)
-    return bunpack(fh:read(size), '>q')
+    return bunpack(fh:read(size), ">q")
 end
 
 M.ebml_parse_utf_8            = M.ebml_parse_string
@@ -185,7 +185,7 @@ M.ebml_parse_u_integer_1_bit_ = M.ebml_parse_u_integer
 M.ebml_parse_binary_see_      = M.ebml_parse_binary
 
 function M:ebml_parse_SeekID(fh, size)
-    return M.leafs[sprintf('%X',ebml_parse_vint(fh, 1))][2]
+    return M.leafs[sprintf("%X",ebml_parse_vint(fh, 1))][2]
 end
 
 --[[
@@ -195,7 +195,7 @@ end
 --]]
 
 -- add the other parser defs: after all the parser defs defined above always!
-M.leafs = require 'matroska_parser_def'
+M.leafs = require "matroska_parser_def"
 
 -- SeekID is special, override it.
 M.leafs["53AB"][1] = M.ebml_parse_SeekID
@@ -220,11 +220,11 @@ function M:iterate()
     while fh:seek() < self.f_end  do
         local id   = ebml_parse_vint(fh, 1)
         local size = ebml_parse_vint(fh)
-        id = sprintf('%X',id)
+        id = sprintf("%X",id)
         local process_element = M.leafs[id]
-        debug('id:',id,',size:',size)
+        debug("id:",id,",size:",size)
         local a,b,c,d = process_element[1](self, fh, size)
-        debug('id:',id,',size:',size,',offset:',fh:seek(),' --> ',a,b,c,d)
+        debug("id:",id,",size:",size,",offset:",fh:seek()," --> ",a,b,c,d)
         return process_element[2], process_element[3], a,b,c,d
     end
     return nil
@@ -256,14 +256,14 @@ function M:open(file)
         if r == nil then
             if element_array[w] ~= nil then
                 element_array[w] = element_array[w] + 1
-                w = w..'/'..element_array[w]
+                w = w.."/"..element_array[w]
             end
             push(stack, w)
         else
-            header[join(stack, '/')..'/'..w] = r
+            header[join(stack, "/").."/"..w] = r
         end
         lastlevel = l
-        if w == 'Cluster' then
+        if w == "Cluster" then
             break
         end
     end
@@ -294,7 +294,7 @@ end
 
 function M:multi(what)
     local multi = {}
-    for _,v,m,k in self:grepinfo(what..'/(%d)/(.*)') do
+    for _,v,m,k in self:grepinfo(what.."/(%d)/(.*)") do
         if multi[m] == nil then
             multi[m] = {}
         end
@@ -304,7 +304,7 @@ function M:multi(what)
 end
 
 function M:tracks(what)
-    return self:multi('Segment/Tracks/TrackEntry')
+    return self:multi("Segment/Tracks/TrackEntry")
 end
 
 function M:close()
