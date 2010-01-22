@@ -53,7 +53,7 @@ foreach my $ebml (@list){
     $level =~ s/\D//g;
 
     print 'matroska_parser_def["'.
-        $ebml->{id}.'"]={_G.matroska.ebml_parse_'.$type.",'$ebml->{name}', $level} -- $desc\n";
+        $ebml->{id}.'"]={_G.matroska.ebml_parse_'.$type.",'$ebml->{name}', $level}\n";
 }
 
 print "return matroska_parser_def\n";
