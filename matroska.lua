@@ -31,9 +31,16 @@ local debugging = nil
 
 local debug = function () end
 if debugging ~= nil then
+    io.stderr:setvbuf("line")
     local oldprint = print
     function print(...)
-        return oldprint(time(), unpack(arg))
+        local va = {}
+        for _,v in ipairs(arg) do
+            push(va, "\t")
+            push(va, tostring(v)) 
+        end
+        push(va, "\n")
+        return io.stderr:write(time(), unpack(va))
     end
     debug = print
 end
@@ -117,8 +124,16 @@ end
 
 --]]
 
+
+local function bit(p)
+    return 2 ^ (p - 1) -- 1-based indexing end 
+end
+
+local bit_3 = 2*bit(3)
+local bit_2 = 2*bit(2)
+
 local function testflag(b, flag)
-    return b % (2*flag) >= flag
+    return b % flag >= flag
 end
 
 function M:ebml_parse_string(fh, size)
@@ -127,25 +142,27 @@ end
 
 function M:ebml_parse_binary(fh, size)
     local start_f  = fh:seek()
+    debug("reading binary from",start_f)
     local tracknr  = ebml_parse_vint(fh, nil)
     local timecode = bunpack(fh:read(2), ">q")
     local flags    = ord(fh:read(1))
     local lacing   = 0 
-    if testflag(flags,6) then
+    local nrlaces  = 0 
+    if testflag(flags,bit_3) then
         lacing = 2
     end
-    if testflag(flags,5) then
+    if testflag(flags,bit_2) then
         lacing = lacing + 1
     end
     if lacing ~= 0 then
-        nrlace = ord(fh:read(1))
+        nrlaces = ord(fh:read(1))
     end
     debug("size"    , size,
           "tracknr" , tracknr,
           "timecode", timecode,
           "flags"   , flags,
           "lacing"  , lacing,
-          "nrlace"  , nrlace)
+          "nrlaces" , nrlaces)
     local cur = fh:seek()
     fh:seek("set", start_f + size)
     return tracknr, timecode, cur, (size - (cur - start_f))

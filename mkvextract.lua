@@ -14,7 +14,7 @@ if arg[1] == "tracks" then
         end
     end
     for i,track in pairs(m:tracks()) do
-        i = tonumber(track.TrackNumber)
+        i = track.TrackNumber
         if tracks[i] ~= nil then
             tracks[i] = assert(io.open(tracks[i],"w"))
             for k,v in pairs(track) do
