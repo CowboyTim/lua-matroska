@@ -2,31 +2,41 @@
 
 local matroska = require("matroska")
 
-local m = matroska:open(arg[#arg])
+local m = matroska:open(arg[2])
 
-if arg[1] == 'tracks' then
-    local tracknr = tonumber(arg[2])
-    local t
+if arg[1] == "tracks" then
+    local tracks = {}
+    for a=3,#arg do
+        local tn, fn = string.match(arg[a],"(.*):(.*)")
+        if tn and fn then
+            print(tn, fn)
+            tracks[tonumber(tn)] = fn
+        end
+    end
     for i,track in pairs(m:tracks()) do
-        if track.TrackNumber == tracknr then
-            t = track
-            break
+        i = tonumber(track.TrackNumber)
+        if tracks[i] ~= nil then
+            tracks[i] = assert(io.open(tracks[i],"w"))
+            for k,v in pairs(track) do
+                io.stderr:write(k,":\t",v,"\n")
+            end
         end
-    end
-    for k,v in pairs(t or {}) do
-        print(k,v)
     end
 
-    local fh = io.open('/var/tmp/aa','w')
-    m:reset()
-    for k,l,t,timecode,pos,size in m:iterator() do
-        if k == 'Block' and t == tracknr then
-            print(k,t,timecode,pos,size)
-            local data = m:read(pos, size)
-            fh:write(data)
+    if #tracks then
+        io.stderr:write("dumping tracks\n")
+        m:reset()
+        for k,l,t,timecode,pos,size in m:iterator() do
+            if k == "Block" and tracks[t] ~= nil then
+                io.stderr:write(k,"\t",t,"\t",timecode,"\t",pos,"\t",size,"\n")
+                local data = m:read(pos, size)
+                tracks[t]:write(data)
+            end
+        end
+        for _,fh in ipairs(tracks) do
+            fh:close()
         end
     end
-    fh:close()
 end
 
 m:close()
