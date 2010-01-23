@@ -27,7 +27,7 @@ local match    = string.match
 local start = time({year = 2001, month = 1, day = 1})
 
 -- logging methods
-local debugging = nil
+local debugging = 1
 
 local debug = function () end
 if debugging ~= nil then
@@ -165,7 +165,7 @@ function M:ebml_parse_binary(fh, size)
                                     frame but not display it
                             5-6   m Lacing:
                                         - 00: no lacing
-                                        - 01:  Xiph lacing
+                                        - 01: Xiph lacing
                                         - 11: EBML lacing
                                         - 10: fixed-size lacing
                             7     - not used
@@ -179,9 +179,13 @@ function M:ebml_parse_binary(fh, size)
     --]]
     local start_f  = fh:seek()
     debug("reading binary from",start_f)
+    
+    -- tracknr/timecode/flags
     local tracknr  = ebml_parse_vint(fh, nil)
     local timecode = bunpack(fh:read(2), ">q")
     local flags    = ord(fh:read(1))
+
+    -- what lacing?
     local lacing   = 0 
     local nrlaces  = 0 
     if testbit_3(flags) then
@@ -190,8 +194,19 @@ function M:ebml_parse_binary(fh, size)
     if testbit_2(flags) then
         lacing = lacing + 1
     end
-    if lacing ~= 0 then
+    if     lacing == 0 then
+        -- no lacing: nothing, perhaps nrlaces =1?
+    elseif lacing == 1 then
+        -- Xiph lacing: TODO
+    elseif lacing == 2 then
+        -- fixed-sized lacing
         nrlaces = ord(fh:read(1))
+    elseif lacing == 3 then
+        -- EBML lacing
+        nrlaces = ord(fh:read(1))
+        --for i=1,nrlaces do
+            --ebml_parse_vint(fh, nil)
+        --end
     end
     debug("size"    , size,
           "tracknr" , tracknr,
