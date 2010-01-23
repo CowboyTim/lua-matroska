@@ -118,6 +118,21 @@ local function ebml_parse_vint(fh, id)
     return bunpack(vint, ">Q")
 end
 
+local function bit(p)
+    return 2 ^ (p - 1) -- 1-based indexing end 
+end
+local function testflag(b, flag)
+    return b % (2*flag) >= flag
+end
+
+local function testbit_3(s)
+    return s % 8 >= 4
+end
+
+local function testbit_2(s)
+    return s % 4 >= 2
+end
+
 --[[
     
     different type element parser functions
@@ -125,22 +140,43 @@ end
 --]]
 
 
-local function bit(p)
-    return 2 ^ (p - 1) -- 1-based indexing end 
-end
-
-local bit_3 = 2*bit(3)
-local bit_2 = 2*bit(2)
-
-local function testflag(b, flag)
-    return b % flag >= flag
-end
-
 function M:ebml_parse_string(fh, size)
     return fh:read(size)
 end
 
 function M:ebml_parse_binary(fh, size)
+    --[[
+
+    According the specs:
+        * Bit 0 is the most significant bit.
+        *
+            Header:
+            0x00+	must	Track Number (Track Entry). It is coded in EBML
+                            like form (1 octet if the value is < 0x80, 2 if
+                             < 0x4000, etc) (most significant bits set to 
+                            increase the range).  0x01+	must	Timecode 
+                            (relative to Cluster timecode, signed int16) 
+
+            0x01+	must	Timecode (relative to Cluster timecode, signed 
+                            int16)
+
+            0x03+	-       0-3   - Reserved, set to 0
+                            4     - Invisible, the codec should decode this
+                                    frame but not display it
+                            5-6   m Lacing:
+                                        - 00: no lacing
+                                        - 01:  Xiph lacing
+                                        - 11: EBML lacing
+                                        - 10: fixed-size lacing
+                            7     - not used
+                            5     - Reserverd, set to 0
+                            4-0   - Priority
+            If Lacing:
+            0x00    must    Nr of frames in lace-1
+
+        TODO: only no lacing and fixed size lacing are implemented now
+
+    --]]
     local start_f  = fh:seek()
     debug("reading binary from",start_f)
     local tracknr  = ebml_parse_vint(fh, nil)
@@ -148,10 +184,10 @@ function M:ebml_parse_binary(fh, size)
     local flags    = ord(fh:read(1))
     local lacing   = 0 
     local nrlaces  = 0 
-    if testflag(flags,bit_3) then
+    if testbit_3(flags) then
         lacing = 2
     end
-    if testflag(flags,bit_2) then
+    if testbit_2(flags) then
         lacing = lacing + 1
     end
     if lacing ~= 0 then
