@@ -27,10 +27,10 @@ local match    = string.match
 local start = time({year = 2001, month = 1, day = 1})
 
 -- logging methods
-local debugging = 1
+local debugging = 0
 
 local debug = function () end
-if debugging ~= nil then
+if debugging == 1 then
     io.stderr:setvbuf("line")
     local oldprint = print
     function print(...)
@@ -144,7 +144,15 @@ function M:ebml_parse_string(fh, size)
     return fh:read(size)
 end
 
+function M:ebml_parse_skip(fh, size)
+    return fh:seek("cur", size)
+end
+
 function M:ebml_parse_binary(fh, size)
+    return fh:read(size)
+end
+
+function M:ebml_parse_binary_see_(fh, size)
     --[[
 
     According the specs:
@@ -250,7 +258,6 @@ end
 
 M.ebml_parse_utf_8            = M.ebml_parse_string
 M.ebml_parse_u_integer_1_bit_ = M.ebml_parse_u_integer
-M.ebml_parse_binary_see_      = M.ebml_parse_binary
 
 function M:ebml_parse_SeekID(fh, size)
     return M.leafs[sprintf("%X",ebml_parse_vint(fh, 1))][2]
@@ -267,6 +274,9 @@ M.leafs = require "matroska_parser_def"
 
 -- SeekID is special, override it.
 M.leafs["53AB"][1] = M.ebml_parse_SeekID
+
+-- Void is special, override it.
+M.leafs["EC"][1] = M.ebml_parse_skip
 
 --[[
 
