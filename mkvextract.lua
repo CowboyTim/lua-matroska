@@ -44,8 +44,13 @@ if arg[1] == "tracks" then
         io.stderr:write("dumping tracks\n")
         m:reset()
         for k,l,t,timecode,pos,size in m:iterator() do
-            io.stderr:write(k,"\t",t or "<nil>","\t",timecode or "<nil>","\t",pos or "<nil>","\t",size or "<nil>","\n")
             if k == "Block" and tracks[t] ~= nil then
+                io.stderr:write(
+                    k                  ,"\t",
+                    t        or "<nil>","\t",
+                    timecode or "<nil>","\t",
+                    pos      or "<nil>","\t",
+                    size     or "<nil>","\n")
                 local data = m:read(pos, size)
                 tracks[t]:write(data)
             end
