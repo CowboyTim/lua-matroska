@@ -26,14 +26,16 @@ end
 local function write_nal(fh, data, where, size_size)
     io.stderr:write(hex(data),"\n")
     local start     = where + size_size
-    local size_end  = bunpack(substr(data,where,start-1),">L")
+    local a = substr(data,where,start-1)
+    io.stderr:write("a:",hex(a),"\n")
+    local size_end  = bunpack(a,">L")
     io.stderr:write("write_nal, start:\t",start, "\tend:",size_end,"\tsize_size:",size_size,"\n")
     if size_end > 0 then
-        size_end = start + size_end - 1
+        size_end = start + size_end
         io.stderr:write("write_in_nal\n")
         fh:write('\000\000\000\001')
-        fh:write(substr(data,start,size_end))
-        return size_end + 2
+        fh:write(substr(data,start,size_end -1))
+        return size_end
     else
         return start + size_end + 1
     end
@@ -59,10 +61,6 @@ local function testbit_1(s)
     return s % 2 >= 1
 end
 
-local function testbit_0(s)
-    return s % 1 >= 0
-end
-
 function C:close()
     return self.fh:close()
 end
@@ -81,10 +79,10 @@ function C:new(fh, data)
 
     local nal_size_size = 1 
     local buf = ord(substr(data, 5,5))
-    if testbit_1(nal_size_size) then
+    if testbit_2(buf) then
         nal_size_size = nal_size_size + 2
     end
-    if testbit_0(nal_size_size) then
+    if testbit_1(buf) then
         nal_size_size = nal_size_size + 1
     end
     io.stderr:write("data\t",#data,"\tnal_size_size:\t",nal_size_size, "\n")
@@ -95,35 +93,32 @@ function C:new(fh, data)
     local numsps = 0 
     buf = ord(substr(data, 6,6))
     if testbit_5(buf) then
-        numsps = numsps + 32
-    end
-    if testbit_4(buf) then
         numsps = numsps + 16
     end
-    if testbit_3(buf) then
+    if testbit_4(buf) then
         numsps = numsps + 8
     end
-    if testbit_2(buf) then
+    if testbit_3(buf) then
         numsps = numsps + 4
     end
-    if testbit_1(buf) then
+    if testbit_2(buf) then
         numsps = numsps + 2
     end
-    if testbit_0(buf) then
+    if testbit_1(buf) then
         numsps = numsps + 1
     end
     io.stderr:write("numsps:\t",numsps, "\n")
 
-    local numpps = 7
+    local pos = 7
     for i=1,numsps do
-        numpps = write_nal(fh,data,numpps,2)
+        pos = write_nal(fh,data,pos,2)
     end
-    numpps = ord(substr(data,numpps,numpps))
-    if numpps == nil then
+    numsps = ord(substr(data,pos,pos))
+    if numsps == nil then
         return o
     end
-    for i=1,numpps do
-        write_nal(fh,data,6,2)
+    for i=1,numsps do
+        pos = write_nal(fh,data,pos,2)
     end
 
     return o
