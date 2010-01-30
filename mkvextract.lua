@@ -46,14 +46,19 @@ if arg[1] == "tracks" then
         io.stderr:write("dumping tracks\n")
         m:reset()
         for k,l,t,timecode,pos,size in m:iterator() do
-            if k == "Block" and tracks[t] ~= nil then
+            if tracks[t] ~= nil then
                 io.stderr:write(
                     k                  ,"\t",
                     t        or "<nil>","\t",
                     timecode or "<nil>","\t",
                     pos      or "<nil>","\t",
                     size     or "<nil>","\n")
-                tracks[t]:write(m:read(pos, size))
+                if     k == "Block" then
+                    tracks[t]:write(m:read(pos, size))
+                elseif k == "SimpleBlock" then 
+                    -- TODO
+                    io.stderr:write("SimpleBlock")
+                end
             end
         end
         for _,fh in ipairs(tracks) do
