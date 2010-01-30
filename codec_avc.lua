@@ -37,7 +37,7 @@ local function write_nal(fh, data, where, size_size)
         fh:write(substr(data,start,size_end -1))
         return size_end
     else
-        return start + size_end + 1
+        return start
     end
 end
 
@@ -114,9 +114,11 @@ function C:new(fh, data)
         pos = write_nal(fh,data,pos,2)
     end
     numsps = ord(substr(data,pos,pos))
+    io.stderr:write("numsps:\t",numsps, "\n")
     if numsps == nil then
         return o
     end
+    pos = pos + 1
     for i=1,numsps do
         pos = write_nal(fh,data,pos,2)
     end
