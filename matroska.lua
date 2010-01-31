@@ -7,17 +7,16 @@ if _REQUIREDNAME == nil then
 end
 _G[_REQUIREDNAME] = M
 
-require("pack")
+local bunpack  = require("bpack")
+
+require("stringextra")
 
 local time     = os.time
-local bunpack  = string.unpack
 local sprintf  = string.format
-local subst    = string.gsub
 local ord      = string.byte
 local char     = string.char
 local strftime = os.date
 local substr   = string.sub
-local stringx  = string.rep
 local push     = table.insert
 local pop      = table.remove
 local join     = table.concat
@@ -45,24 +44,10 @@ if debugging == 1 then
     debug = print
 end
 
-local function hex(s)
-    return subst(s,"(.)",function (x) return sprintf("%02X",ord(x)) end)
-end
-
-local bunpack = function(str, format)
-    local i = 4
-    local f = substr(format, 2, 2)
-    if f == "Q" or f == "q" then
-        i = 8
-    end
-    local s, v = bunpack(stringx("\000", i-#(str))..str, format)
-    return tonumber(v)
-end
-
 local function ebml_parse_vint(fh, id)
     debug("reading from:",fh)
     local size = fh:read(1)
-    debug(hex(size))
+    debug(string.hex(size))
     local nrbytes
     size = ord(size)
     if     size > 127 then

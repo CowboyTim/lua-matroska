@@ -1,15 +1,11 @@
 
-local L = _G.string
+require("pack")
 
-local subst   = string.gsub
-local substr  = string.sub
-local ord     = string.byte
-local push    = table.insert
-local sprintf = string.format
-
-local function hex(s)
-    return subst(s,"(.)",function (x) return sprintf("%02X",ord(x)) end)
-end
+local substr   = string.sub
+local ord      = string.byte
+local push     = table.insert
+local sprintf  = string.format
+local stringx  = string.rep
 
 local function dump(t)
     for i,v in ipairs(t) do
@@ -18,7 +14,7 @@ local function dump(t)
 end
 
 
-L.unpack = function(format, str)
+local function mybunpack_in_lua(format, str)
 
     local i = 1
     local v
@@ -50,4 +46,16 @@ L.unpack = function(format, str)
     return t
 end
 
-return L
+local bunpack = string.unpack
+local bunpack = function(str, format)
+    local i = 4
+    local f = substr(format, 2, 2)
+    if f == "Q" or f == "q" then
+        i = 8
+    end
+    local s, v = bunpack(stringx("\000", i-#(str))..str, format)
+    return tonumber(v)
+end
+
+return bunpack
+

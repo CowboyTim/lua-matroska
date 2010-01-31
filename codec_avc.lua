@@ -1,33 +1,16 @@
 local C = {}
 
-require("pack")
-local bunpack  = string.unpack
+require("stringextra")
+local bunpack  = require("bpack")
 
 local substr   = string.sub
 local ord      = string.byte
-local stringx  = string.rep
-local subst    = string.gsub
-local sprintf  = string.format
-
-local bunpack = function(str, format)
-    local i = 4
-    local f = substr(format, 2, 2)
-    if f == "Q" or f == "q" then
-        i = 8
-    end
-    local s, v = bunpack(stringx("\000", i-#(str))..str, format)
-    return tonumber(v)
-end
-
-local function hex(s)
-    return subst(s,"(.)",function (x) return sprintf("%02X",ord(x)) end)
-end
 
 local function write_nal(fh, data, where, size_size)
-    io.stderr:write(hex(data),"\n")
+    io.stderr:write(string.hex(data),"\n")
     local start     = where + size_size
     local a = substr(data,where,start-1)
-    io.stderr:write("a:",hex(a),"\n")
+    io.stderr:write("a:",string.hex(a),"\n")
     local size_end  = bunpack(a,">L")
     io.stderr:write("write_nal, start:\t",start, "\tend:",size_end,"\tsize_size:",size_size,"\n")
     if size_end > 0 then

@@ -1,13 +1,7 @@
 #!/usr/bin/lua
 
 local matroska = require("matroska")
-
-local ord      = string.byte
-local sprintf  = string.format
-local subst    = string.gsub
-local function hex(s)
-    return subst(s,"(.)",function (x) return sprintf("%02X",ord(x)) end)
-end
+require("stringextra")
 
 local verbose = nil
 if arg[1] == '-v' then
@@ -17,7 +11,7 @@ end
 local m = matroska:open(arg[1])
 for k,l,v in m:info() do
     if k == 'SegmentUID' or k == 'CodecPrivate' then
-        v = hex(v)
+        v = string.hex(v)
     end
     print(k,v)
     if not verbose and k == 'Cluster' then
