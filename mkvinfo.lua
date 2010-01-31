@@ -1,6 +1,6 @@
 #!/usr/bin/lua
 
-local matroska = require("matroska")
+require("matroska")
 require("stringextra")
 
 local verbose = nil

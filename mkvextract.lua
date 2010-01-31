@@ -1,6 +1,6 @@
 #!/usr/bin/lua
 
-local matroska = require("matroska")
+require("matroska")
 
 local m = matroska:open(arg[2])
 
