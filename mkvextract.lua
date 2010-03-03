@@ -32,7 +32,7 @@ if arg[1] == "tracks" then
             elseif raw[t] == nil then
                 -- no --raw/--fullraw option in mkvextract
                 local codec = "codec_"..string.gsub(track.CodecID,"[^%w]+", "_")
-                local codec = require(codec)
+                codec = require(codec)
                 tracks[t] = codec:new(tracks[t], track.CodecPrivate)
             else
                 -- --raw option: nothing extra
