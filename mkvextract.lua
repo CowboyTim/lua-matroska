@@ -24,17 +24,18 @@ if arg[1] == "tracks" then
         t = track.TrackNumber
         if tracks[t] ~= nil then
             tracks[t] = assert(io.open(tracks[t],"w"))
-            if track.CodecPrivate ~= nil then
-                if     raw[t] == "fullraw" then
-                    -- --fullraw option in mkvextract
+            if     raw[t] == "fullraw" then
+                -- --fullraw option in mkvextract
+                if track.CodecPrivate ~= nil then
                     tracks[t]:write(track.CodecPrivate)
-                elseif raw[t] == nil then
-                    -- no --raw/--fullraw option in mkvextract
-                    local codec = require "codec_avc"
-                    tracks[t] = codec:new(tracks[t], track.CodecPrivate)
-                else
-                    -- --raw option: nothing extra
                 end
+            elseif raw[t] == nil then
+                -- no --raw/--fullraw option in mkvextract
+                local codec = "codec_"..string.gsub(track.CodecID,"[^%w]+", "_")
+                local codec = require(codec)
+                tracks[t] = codec:new(tracks[t], track.CodecPrivate)
+            else
+                -- --raw option: nothing extra
             end
             for k,v in pairs(track) do
                 io.stderr:write(k,":\t",v,"\n")
