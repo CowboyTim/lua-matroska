@@ -5,7 +5,7 @@ function C:close()
 end
 
 function C:write(data)
-    return data
+    return self.fh:write(data)
 end
 
 function C:new(fh, data)
