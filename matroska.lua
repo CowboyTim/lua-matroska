@@ -269,6 +269,19 @@ M.leafs["EC"][1] = M.ebml_parse_skip
 
 --]]
 
+function M:grep(base)
+    local find = string.find
+    local iter = self:fulliterator()
+    return function() 
+        for w,l,r,timecode,pos,size in iter, self do
+            if find(w, base) then
+                return w, l, r, timecode, pos, size
+            end
+        end
+        return nil
+    end, self
+end
+
 function M:fulliterator()
     local header        = {}
     local stack         = {}
