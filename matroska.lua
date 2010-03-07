@@ -269,13 +269,43 @@ M.leafs["EC"][1] = M.ebml_parse_skip
 
 --]]
 
+function M:fulliterator()
+    local header        = {}
+    local stack         = {}
+    local lastlevel     = 0
+    local element_array = { TrackEntry = 0, Seek = 0 }
+	return function(self)
+		local w, l, r, timecode, pos, size = self:iterate()
+		if w == nil then
+			return nil
+		end
+        if l < lastlevel then
+            for i=l+1,lastlevel do
+                pop(stack)
+            end
+        end
+        if r == nil then
+            if element_array[w] ~= nil then
+                element_array[w] = element_array[w] + 1
+                w = w.."/"..element_array[w]
+            end
+            push(stack, w)
+        	w = join(stack, "/")
+		else
+        	w = join(stack, "/").."/"..w
+        end
+        lastlevel = l
+		return w, l, r, timecode, pos, size
+    end, self
+end
+
 function M:iterator()
     return self.iterate, self
 end
 
 function M:info()
     self:reset()
-    return self:iterator()
+    return self:fulliterator()
 end
 
 function M:iterate()
@@ -293,8 +323,6 @@ function M:iterate()
     return nil
 end
 
-local element_array = { TrackEntry = 0, Seek = 0 }
-
 -- define the open: uses leafs as a closure
 function M:open(file)
     local mkv = {}
@@ -307,25 +335,9 @@ function M:open(file)
     mkv.fh    = fh
     debug("f_end:", f_end)
     fh:seek("set")
-    local header    = {}
-    local stack     = {}
-    local lastlevel = 0
-    for w, l, r in mkv:iterator() do
-        if l < lastlevel then
-            for i=l+1,lastlevel do
-                pop(stack)
-            end
-        end
-        if r == nil then
-            if element_array[w] ~= nil then
-                element_array[w] = element_array[w] + 1
-                w = w.."/"..element_array[w]
-            end
-            push(stack, w)
-        else
-            header[join(stack, "/").."/"..w] = r
-        end
-        lastlevel = l
+    local header = {}
+    for w, l, r in mkv:fulliterator() do
+		header[w] = r
         if w == "Cluster" then
             break
         end

@@ -4,6 +4,9 @@ require("matroska")
 
 local m = matroska:open(arg[2])
 
+local match = string.find
+local subst = string.gsub
+
 if arg[1] == "tracks" then
     local raw    = {}
     local tracks = {}
@@ -31,7 +34,7 @@ if arg[1] == "tracks" then
                 end
             elseif raw[t] == nil then
                 -- no --raw/--fullraw option in mkvextract
-                local codec = "codec_"..string.gsub(track.CodecID,"[^%w]+", "_")
+                local codec = "codec_"..subst(track.CodecID,"[^%w]+", "_")
                 codec = require(codec)
                 tracks[t] = codec:new(tracks[t], track.CodecPrivate)
             else
@@ -46,24 +49,18 @@ if arg[1] == "tracks" then
     if #tracks then
         io.stderr:write("dumping tracks\n")
         m:reset()
-        for k,l,t,timecode,pos,size in m:iterator() do
-            io.stderr:write(
-                k                  ,"\t",
-                t        or "<nil>","\t",
-                timecode or "<nil>","\t",
-                pos      or "<nil>","\t",
-                size     or "<nil>","\n")
-            if tracks[t] ~= nil then
-                if     k == "Block" then
-                    tracks[t]:write(m:read(pos, size))
-                elseif k == "SimpleBlock" then 
-                    -- TODO
-                    io.stderr:write("SimpleBlock")
-                end
+        for k,l,t,timecode,pos,size in m:fulliterator() do
+            if tracks[t] ~= nil and (
+                match(k, "/Block$") or match(k, "/SimpleBlock$") 
+            ) then
+                io.stderr:write(
+                    k                  ,"\t",
+                    t        or "<nil>","\t",
+                    timecode or "<nil>","\t",
+                    pos      or "<nil>","\t",
+                    size     or "<nil>","\n")
+                tracks[t]:write(m:read(pos, size))
             end
-        end
-        for _,fh in ipairs(tracks) do
-            fh:close()
         end
     end
 end
