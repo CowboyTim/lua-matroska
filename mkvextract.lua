@@ -49,7 +49,7 @@ if arg[1] == "tracks" then
     if #tracks then
         io.stderr:write("dumping tracks\n")
         m:reset()
-        for k,l,t,timecode,pos,size in m:grep("^Segment/Cluster/BlockGroup") do
+        for k,l,t,timecode,pos,size in m:grep("^Segment/Cluster") do
             if tracks[t] ~= nil and (
                 match(k, "/Block$") or match(k, "/SimpleBlock$") 
             ) then
