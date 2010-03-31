@@ -26,7 +26,7 @@ local match    = string.match
 local start = time({year = 2001, month = 1, day = 1})
 
 -- logging methods
-local debugging = 0
+local debugging = 1
 
 local debug = function () end
 if debugging == 1 then
@@ -349,12 +349,13 @@ function M:open(file)
     debug("f_end:", f_end)
     fh:seek("set")
     local header = {}
-    for w, l, r in mkv:fulliterator() do
+    for w, _, r in mkv:fulliterator() do
 		header[w] = r
-        if w == "Cluster" then
+        if w == "Segment/Cluster" then
             break
         end
     end
+    debug("done opening file:", file)
 
     mkv.header = header
     return mkv
