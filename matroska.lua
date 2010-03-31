@@ -16,7 +16,6 @@ local sprintf  = string.format
 local ord      = string.byte
 local char     = string.char
 local strftime = os.date
-local substr   = string.sub
 local push     = table.insert
 local pop      = table.remove
 local join     = table.concat
