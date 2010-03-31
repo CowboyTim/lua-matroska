@@ -13,10 +13,10 @@ for t,track in pairs(m:tracks()) do
         io.stderr:write(k,":\t",v,"\n")
     end
     t = track.TrackNumber
-    local codec = "codec_"..subst(track.CodecID,"[^%w]+", "_")
-    codec = require(codec)
-    local player = "play_"..subst(track.CodecID,"[^%w]+", "_")
-    if pcall(function() player = require(player)  end) then
+    local c_name = subst(track.CodecID,"[^%w]+", "_")
+    local codec  = require("codec_"..c_name)
+    local player
+    if pcall(function() player = require("play_"..c_name) end) then
         player = player:new()
     else
         player = assert(io.open("/dev/null", "a"))
