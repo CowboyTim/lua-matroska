@@ -104,13 +104,15 @@ local function decode_seq_parameter_set(nal_unit, i)
             for j=1, (sps.chroma_format_idc == 3 and 12 or 8) do
                 i, b, sps.seq_scaling_list_present_flag[j] = get_bit(nal_unit, i, b)
                 if sps.seq_scaling_list_present_flag[j] then
-                    sps.scalinglist = {}
-                    sps.defscaling  = {}
                     if j < 7 then   -- LUA array 1, see for j=1
-                        i, b, sps.scalinglist[j],   sps.defscaling[j]
+                        sps.scalinglist4x4 = sps.scalinglist4x4 or {}
+                        sps.defscaling4x4  = sps.defscaling4x4  or {}
+                        i, b, sps.scalinglist4x4[j],   sps.defscaling4x4[j]
                             = scaling_list(nal_unit, i, b, 16)
                     else
-                        i, b, sps.scalinglist[j-7], sps.defscaling[j-7] 
+                        sps.scalinglist8x8 = sps.scalinglist8x8 or {}
+                        sps.defscaling8x8  = sps.defscaling8x8  or {}
+                        i, b, sps.scalinglist8x8[j-7], sps.defscaling8x8[j-7] 
                             = scaling_list(nal_unit, i, b, 64)
                     end
                 end
