@@ -23,20 +23,30 @@ end
 
 local get_ue_golomb = get_golomb
 
-local function get_bit(data, i, bit_start)
-    return i, bit_start + 1,
+local function get_bit(data, i, bit)
+    if bit == 7 then
+        i = i + 1
+    end
+    local byte = ord(data, i, i)
+    return i, bit == 7 and 0 or bit + 1, ((byte%(2^bit) >= 2^(bit-1)) and 1) or 0
+end
+
+local function scaling_list(data, size)
 end
 
 local function nal_type(nal_abbr)
     return read_bits(nal_abbr, 5, 6), read_bits(nal_abbr, 0, 4)
 end
 
-local function dump_sps(sps)
+local function dump_table(t)
     local p = {}
-    for k, v in pairs(sps) do
-        push(p, k..": "..(v or nil)..",")
+    for k, v in pairs(t) do
+        if type(v) == 'table' then
+            v = '{'..dump_table(v)..'}'
+        end
+        push(p, k..":"..(v or nil))
     end
-    return join(p, "\t")
+    return join(p, " ,")
 end
 
 local function decode_seq_parameter_set(nal_unit, i)
@@ -63,9 +73,20 @@ local function decode_seq_parameter_set(nal_unit, i)
         i, b, sps.bit_depth_chroma_minus8 = get_ue_golomb(nal_unit, i, b)
 
         i, b, sps.qpprime_y_zero_transform_bypass_flag = get_bit(nal_unit, i, b)
-        i, b, sps.seq_scaling_list_present_flag        = get_bit(nal_unit, i, b)
-        --if sps.seq_scaling_list_present_flag then
-        --end
+        i, b, sps.seq_scaling_matrix_present_flag      = get_bit(nal_unit, i, b)
+        if sps.seq_scaling_matrix_present_flag then
+            sps.seq_scaling_list_present_flag = {}
+            for i=0, sps.chroma_format_idc == 3 and 12 or 8 do
+                i, b, sps.seq_scaling_list_present_flag[i] = get_bit(nal_unit, i, b)
+                if sps.seq_scaling_list_present_flag[i] then
+                    if i < 6 then
+                        scaling_list(nal_unit, 16)
+                    else
+                        scaling_list(nal_unit, 64)
+                    end
+                end
+            end
+        end
     end
         
     i, b, sps.log2_max_frame_num_minus4 = get_ue_golomb(nal_unit, i, b)
@@ -76,7 +97,7 @@ local function decode_seq_parameter_set(nal_unit, i)
         i, b, sps.log2_max_pic_order_cnt_lsb_minus4 = get_ue_golomb(nal_unit, i, b)
     end
 
-    io.stderr:write("SPS:\t",dump_sps(sps),"\n")
+    io.stderr:write("SPS:\t",dump_table(sps),"\n")
 
 
     -- FIXME: implement further
