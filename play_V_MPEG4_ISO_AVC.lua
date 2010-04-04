@@ -3,6 +3,7 @@ local PlayC = {}
 local ord    = string.byte
 local substr = string.sub
 local round  = math.modf
+local ceil   = math.ceil
 local join   = table.concat
 local push   = table.insert
 
@@ -23,6 +24,12 @@ end
 
 local get_ue_golomb = get_golomb
 
+local function get_se_golomb(data, i, b)
+    io.stderr:write("get_se_golomb:i:"..i..",b:"..b.."\n")
+    local i, b, v = get_golomb(data, i, b)
+    return i, b, -1^(v+1)* ceil(v/2)
+end
+
 local function get_bit(data, i, bit)
     if bit == 7 then
         i = i + 1
@@ -31,7 +38,24 @@ local function get_bit(data, i, bit)
     return i, bit == 7 and 0 or bit + 1, ((byte%(2^bit) >= 2^(bit-1)) and 1) or 0
 end
 
-local function scaling_list(data, size)
+local function scaling_list(data, i, b, size)
+    io.stderr:write("scalinglist, i:"..i)
+    local lastscale, nextscale, sl = 8, 8, {}
+    local deltascale, defaultscalematrixflag
+    for j=1, size do
+        if nextscale then
+            i, b, deltascale = get_se_golomb(data, i, b)
+            nextscale = (lastscale + deltascale + 256) % 256
+            defaultscalematrixflag = j == 1 and nextscale == 0
+        end
+        lastscale = nextscale or lastscale and nextscale
+        sl[j] = lastscale
+    end
+    return i, b, sl, defaultscalematrixflag
+end
+
+local function vui_parameters(data, size)
+    -- FIXME
 end
 
 local function nal_type(nal_abbr)
@@ -53,8 +77,9 @@ local function decode_seq_parameter_set(nal_unit, i)
 
     local sps = {}
     sps.profile_idc, sps.constaint_f, sps.level_idc = ord(nal_unit, i, i+3)
-    i, b, sps.id = get_ue_golomb(nal_unit, i+3, 0)
+    i, b, sps.id = get_ue_golomb(nal_unit, i+4, 0)
 
+    io.stderr:write("SPS:\t",dump_table(sps),"\n")
 
     if sps.profile_idc == 100 or
        sps.profile_idc == 110 or
@@ -76,13 +101,14 @@ local function decode_seq_parameter_set(nal_unit, i)
         i, b, sps.seq_scaling_matrix_present_flag      = get_bit(nal_unit, i, b)
         if sps.seq_scaling_matrix_present_flag then
             sps.seq_scaling_list_present_flag = {}
-            for i=0, sps.chroma_format_idc == 3 and 12 or 8 do
-                i, b, sps.seq_scaling_list_present_flag[i] = get_bit(nal_unit, i, b)
-                if sps.seq_scaling_list_present_flag[i] then
-                    if i < 6 then
-                        scaling_list(nal_unit, 16)
+            for j=1, (sps.chroma_format_idc == 3 and 12 or 8) do
+                i, b, sps.seq_scaling_list_present_flag[j] = get_bit(nal_unit, i, b)
+                if sps.seq_scaling_list_present_flag[j] then
+                    sps.scalinglist = {}
+                    if j < 7 then   -- LUA array 1, see for j=1
+                        i, b, sps.scalinglist[j], sps.def = scaling_list(nal_unit, i, b, 16)
                     else
-                        scaling_list(nal_unit, 64)
+                        i, b, sps.scalinglist[j], sps.def = scaling_list(nal_unit, i, b, 64)
                     end
                 end
             end
@@ -94,11 +120,39 @@ local function decode_seq_parameter_set(nal_unit, i)
     if      sps.pic_order_cnt_type == 0 then
         i, b, sps.log2_max_pic_order_cnt_lsb_minus4 = get_ue_golomb(nal_unit, i, b)
     elseif sps.pic_order_cnt_type == 1 then
-        i, b, sps.log2_max_pic_order_cnt_lsb_minus4 = get_ue_golomb(nal_unit, i, b)
+        i, b, sps.delta_pic_always_zero_flag     = get_bit(nal_unit, i, b)
+        i, b, sps.offset_for_non_ref_pic         = get_se_golomb(nal_unit, i, b)
+        i, b, sps.offset_for_top_to_bottom_field = get_se_golomb(nal_unit, i, b)
+        i, b, sps.num_ref_frames_in_pic_order_cnt_cycle
+                                                 = get_ue_golomb(nal_unit, i, b)
+        sps.offset_for_ref_frame = {}
+        for i=1,sps.num_ref_frames_in_pic_order_cnt_cycle do
+            sps.offset_for_ref_frame[i] = get_se_golomb(nal_unit, i, b)
+        end
+    end
+
+    i, b, sps.max_num_ref_frames                   = get_ue_golomb(nal_unit, i, b)
+    i, b, sps.gaps_in_frame_num_value_allowed_flag = get_bit(nal_unit, i, b)
+    i, b, sps.pic_width_in_mbs_minus1              = get_ue_golomb(nal_unit, i, b)
+    i, b, sps.pic_height_in_map_units_minus1       = get_ue_golomb(nal_unit, i, b)
+    i, b, sps.frame_mbs_only_flag                  = get_bit(nal_unit, i, b)
+    if not sps.frame_mbs_only_flag then
+        i, b, sps.mb_adaptive_frame_field_flag     = get_bit(nal_unit, i, b)
+    end
+    i, b, sps.direct_8x8_interference_flag         = get_bit(nal_unit, i, b)
+    i, b, sps.frame_cropping_flag                  = get_bit(nal_unit, i, b)
+    if sps.frame_cropping_flag then
+        i, b, sps.frame_crop_left_offset           = get_ue_golomb(nal_unit, i, b)
+        i, b, sps.frame_crop_right_offset          = get_ue_golomb(nal_unit, i, b)
+        i, b, sps.frame_crop_top_offset            = get_ue_golomb(nal_unit, i, b)
+        i, b, sps.frame_crop_bottom_offset         = get_ue_golomb(nal_unit, i, b)
+    end
+    i, b, sps.vui_parameters_present_flag          = get_bit(nal_unit, i, b)
+    if sps.vui_parameters_present_flag then
+        i, b, sps.vui_parameters = vui_parameters(nal_unit, i, b)
     end
 
     io.stderr:write("SPS:\t",dump_table(sps),"\n")
-
 
     -- FIXME: implement further
     
@@ -106,7 +160,7 @@ local function decode_seq_parameter_set(nal_unit, i)
 end
 
 function PlayC:write(_, nal_unit)
-    --io.stderr:write(nal_unit)
+    io.stderr:write("NAL data length:"..#(nal_unit).."\n")
     local i = 1
 
     -- determine main nal_unit_type
