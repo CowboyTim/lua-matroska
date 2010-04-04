@@ -3,6 +3,8 @@ local PlayC = {}
 local ord    = string.byte
 local substr = string.sub
 local round  = math.modf
+local join   = table.concat
+local push   = table.insert
 
 local get_golomb = require("golomb")
 
@@ -21,8 +23,20 @@ end
 
 local get_ue_golomb = get_golomb
 
+local function get_bit(data, i, bit_start)
+    return i, bit_start + 1,
+end
+
 local function nal_type(nal_abbr)
     return read_bits(nal_abbr, 5, 6), read_bits(nal_abbr, 0, 4)
+end
+
+local function dump_sps(sps)
+    local p = {}
+    for k, v in pairs(sps) do
+        push(p, k..": "..(v or nil)..",")
+    end
+    return join(p, "\t")
 end
 
 local function decode_seq_parameter_set(nal_unit, i)
@@ -31,13 +45,38 @@ local function decode_seq_parameter_set(nal_unit, i)
     sps.profile_idc, sps.constaint_f, sps.level_idc = ord(nal_unit, i, i+3)
     i, b, sps.id = get_ue_golomb(nal_unit, i+3, 0)
 
-    io.stderr:write(
-        "profile_idc:\t",   sps.profile_idc or "<nil>",
-        "\tconstaint_f:\t", sps.constaint_f or "<nil>",
-        "\tlevel_idc:\t",   sps.level_idc   or "<nil>",
-        "\tsps_id:\t",      sps.id          or "<nil>",
-        "\ti:\t",           i, "\n"
-    )
+
+    if sps.profile_idc == 100 or
+       sps.profile_idc == 110 or
+       sps.profile_idc == 122 or
+       sps.profile_idc == 244 or
+       sps.profile_idc == 118 or
+       sps.profile_idc ==  44 or
+       sps.profile_idc ==  83 or
+       sps.profile_idc ==  86 
+    then
+        i, b, sps.chroma_format_idc = get_ue_golomb(nal_unit, i, b)
+        if sps.chroma_format_idc == 3 then
+            i, b, sps.seperate_colour_plane_flag = get_bit(nal_unit, i, b)
+        end
+        i, b, sps.bit_depth_luma_minus8   = get_ue_golomb(nal_unit, i, b)
+        i, b, sps.bit_depth_chroma_minus8 = get_ue_golomb(nal_unit, i, b)
+
+        i, b, sps.qpprime_y_zero_transform_bypass_flag = get_bit(nal_unit, i, b)
+        i, b, sps.seq_scaling_list_present_flag        = get_bit(nal_unit, i, b)
+        --if sps.seq_scaling_list_present_flag then
+        --end
+    end
+        
+    i, b, sps.log2_max_frame_num_minus4 = get_ue_golomb(nal_unit, i, b)
+    i, b, sps.pic_order_cnt_type        = get_ue_golomb(nal_unit, i, b)
+    if      sps.pic_order_cnt_type == 0 then
+        i, b, sps.log2_max_pic_order_cnt_lsb_minus4 = get_ue_golomb(nal_unit, i, b)
+    elseif sps.pic_order_cnt_type == 1 then
+        i, b, sps.log2_max_pic_order_cnt_lsb_minus4 = get_ue_golomb(nal_unit, i, b)
+    end
+
+    io.stderr:write("SPS:\t",dump_sps(sps),"\n")
 
 
     -- FIXME: implement further

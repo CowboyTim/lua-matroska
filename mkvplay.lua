@@ -16,9 +16,11 @@ for t,track in pairs(m:tracks()) do
     local c_name = subst(track.CodecID,"[^%w]+", "_")
     local codec  = require("codec_"..c_name)
     local player
-    if pcall(function() player = require("play_"..c_name) end) then
+    local status, err = pcall(function() player = require("play_"..c_name) end)
+    if status then
         player = player:new()
     else
+        io.stderr:write("Error loading play_"..c_name..":"..err.."\n")
         player = assert(io.open("/dev/null", "a"))
     end 
     tracks[t] = codec:new(player, track.CodecPrivate)
