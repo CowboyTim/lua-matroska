@@ -117,6 +117,10 @@ local function decode_seq_parameter_set(nal_unit, i)
                     end
                 end
             end
+        else
+            sps.chroma_format_idc       = 1
+            sps.bit_depth_luma_minus8   = 0
+            sps.bit_depth_chroma_minus8 = 0
         end
     end
         
