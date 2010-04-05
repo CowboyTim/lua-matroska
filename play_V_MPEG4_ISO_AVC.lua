@@ -1,4 +1,8 @@
+
+
 local PlayC = {}
+
+local bit = require("bit")
 
 local ord    = string.byte
 local substr = string.sub
@@ -7,7 +11,8 @@ local ceil   = math.ceil
 local join   = table.concat
 local push   = table.insert
 
-local get_golomb = require("golomb")
+local get_golomb = bit.get_golomb
+local get_ue_golomb = get_golomb
 
 local function read_bits(byte, from, to)
     local s = 0
@@ -22,15 +27,13 @@ local function read_bits(byte, from, to)
     return s
 end
 
-local get_ue_golomb = get_golomb
-
 local function get_se_golomb(data, i, b)
     io.stderr:write("get_se_golomb:i:"..i..",b:"..b.."\n")
     local i, b, v = get_golomb(data, i, b)
     return i, b, -1^(v+1)* ceil(v/2)
 end
 
-local function get_bit(data, i, bit)
+local function get_bit(data, i, bit, nrbits)
     if bit == 7 then
         i = i + 1
     end
@@ -39,7 +42,6 @@ local function get_bit(data, i, bit)
 end
 
 local function scaling_list(data, i, b, size)
-    io.stderr:write("scalinglist, i:"..i)
     local lastscale, nextscale, sl, defaultscalematrixflag = 8, 8, {}, 0
     local deltascale
     for j=1, size do
@@ -54,8 +56,96 @@ local function scaling_list(data, i, b, size)
     return i, b, sl, defaultscalematrixflag
 end
 
-local function vui_parameters(data, size)
-    -- FIXME
+local function hrd_parameters(data, i, b)
+    local hrd = {}
+
+    i, b, hrd.cpb_cnt_minus1 = get_ue_golomb(data, i, b)
+    i, b, hrd.bit_rate_scale = get_bit(data, i, b, 4)
+    i, b, hrd.cpb_size_scale = get_bit(data, i, b, 4)
+    hrd,bit_rate_value_minus1 = {}
+    hrd,cpb_size_value_minus1 = {}
+    hrd,cpb_flag              = {}
+    for j=1,hrd.cpb_cnt_minus1+1 do
+        i, b, hrd.bit_rate_value_minus1[j] = get_ue_golomb(data, i, b)
+        i, b, hrd.cpb_size_value_minus1[j] = get_ue_golomb(data, i, b)
+        i, b, hrd.cpb_flag[j]              = get_bit(data, i, b)
+    end
+    i, b, hrd.initial_cpb_removal_delay_length = get_bit(data, i, b, 5)
+    i, b, hrd.cpb_removal_delay_length_minus1  = get_bit(data, i, b, 5)
+    i, b, hrd.dpb_output_delay_length_minus1   = get_bit(data, i, b, 5)
+    i, b, hrd.time_offset_length               = get_bit(data, i, b, 5)
+
+    return i, b, hrd
+end
+
+local function vui_parameters(data, i, b)
+    local vui = {}
+
+    i, b, vui.aspect_ratio_info_present_flag = get_bit(data, i, b)
+    if vui.aspect_ratio_info_present_flag then
+        i, b, vui.aspect_ratio_idc = get_bit(data, i, b, 8)
+        if vui.aspect_ratio_idc then
+            vui.sar_width  = get_bit(data, i, b, 16)
+            vui.sar_height = get_bit(data, i, b, 16)
+        end
+    end
+
+    i, b, vui.overscan_info_present_flag = get_bit(data, i, b)
+    if vui.overscan_info_present_flag then
+        i, b, vui.overscan_appropriate_flag = get_bit(data, i, b)
+    end
+
+    i, b, vui.video_signal_type_present_flag = get_bit(data, i, b)
+    if vui.video_signal_type_present_flag then
+        i, b, vui.video_format                    = get_bit(data, i, b, 3)
+        i, b, vui.video_full_range_flag           = get_bit(data, i, b)
+        i, b, vui.colour_description_present_flag = get_bit(data, i, b)
+        if vui.colour_description_present_flag then
+            i, b, vui.colour_primaries         = get_bit(data, i, b, 8)
+            i, b, vui.transfer_characteristics = get_bit(data, i, b, 8)
+            i, b, vui.matrix_coefficients      = get_bit(data, i, b, 8)
+        end
+    end
+
+    i, b, vui.chroma_location_info_present_flag = get_bit(data, i, b)
+    if vui.chroma_location_info_present_flag then
+        i, b, vui.chroma_sample_loc_type_top_field    = get_ue_golomb(data, i, b)
+        i, b, vui.chroma_sample_loc_type_bottom_field = get_ue_golomb(data, i, b)
+    end
+
+    i, b, vui.timing_info_present_flag = get_bit(data, i, b)
+    if vui.timing_info_present_flag then
+        i, b, vui.num_units_in_tick     = get_bit(data, i, b, 32)
+        i, b, vui.time_scale            = get_bit(data, i, b, 32)
+        i, b, vui.fixed_frame_rate_flag = get_bit(data, i, b)
+    end
+
+    i, b, vui.nal_hrd_parameters_present_flag = get_bit(data, i, b)
+    if vui.nal_hrd_parameters_present_flag then
+        i, b, vui.nal_hrd_parameters = hrd_parameters(data, i, b)
+    end
+    i, b, vui.vcl_hrd_parameters_present_flag = get_bit(data, i, b)
+    if vui.vcl_hrd_parameters_present_flag then
+        i, b, vui.vcl_hrd_parameters = hrd_parameters(data, i, b)
+    end
+    if     vui.vcl_hrd_parameters_present_flag
+        or vui.nal_hrd_parameters_present_flag then
+        i, b, vui.low_delay_hrd_flag = get_bit(data, i, b)
+    end
+
+    i, b, vui.pic_struct_present_flag    = get_bit(data, i, b)
+    i, b, vui.bitstream_restriction_flag = get_bit(data, i, b)
+    if vui.bitstream_restriction_flag then
+        i, b, vui.motion_vectors_over_pic_boundaries_flag = get_bit(data, i, b)
+        i, b, vui.max_bytes_per_pic_denom                 = get_bit(data, i, b)
+        i, b, vui.max_bits_per_mb_denom                   = get_bit(data, i, b)
+        i, b, vui.log2_max_mv_length_horizontal           = get_bit(data, i, b)
+        i, b, vui.log2_max_mv_length_vertical             = get_bit(data, i, b)
+        i, b, vui.num_reorder_frames                      = get_bit(data, i, b)
+        i, b, vui.max_dec_frame_buffering                 = get_bit(data, i, b)
+    end
+
+    return i, b, vui
 end
 
 local function nal_type(nal_abbr)
@@ -160,8 +250,6 @@ local function decode_seq_parameter_set(nal_unit, i)
     end
 
     io.stderr:write("SPS:\t",dump_table(sps),"\n")
-
-    -- FIXME: implement further
     
     return i, sps
 end

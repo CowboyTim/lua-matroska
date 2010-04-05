@@ -1,8 +1,16 @@
 
+local B = {}
+
+if _REQUIREDNAME == nil then
+    _REQUIREDNAME = "bit"
+end
+_G[_REQUIREDNAME] = B
+
+
 local ord    = string.byte
 local round  = math.modf
 
-local function get_golomb(data, i, bit_start)
+B.get_golomb = function (data, i, bit_start)
     local nrbits, rb_v, rb_c, nr = nil, 0, 0, 0
     while 1 do
         local v = ord(data, i, i)
@@ -48,4 +56,4 @@ local function get_golomb(data, i, bit_start)
     end
 end
 
-return get_golomb
+return B
