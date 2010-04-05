@@ -40,13 +40,13 @@ end
 
 local function scaling_list(data, i, b, size)
     io.stderr:write("scalinglist, i:"..i)
-    local lastscale, nextscale, sl = 8, 8, {}
-    local deltascale, defaultscalematrixflag
+    local lastscale, nextscale, sl, defaultscalematrixflag = 8, 8, {}, 0
+    local deltascale
     for j=1, size do
         if nextscale then
             i, b, deltascale = get_se_golomb(data, i, b)
             nextscale = (lastscale + deltascale + 256) % 256
-            defaultscalematrixflag = j == 1 and nextscale == 0
+            defaultscalematrixflag = (j == 1 and nextscale == 0) or 0
         end
         lastscale = nextscale or lastscale and nextscale
         sl[j] = lastscale
@@ -68,7 +68,7 @@ local function dump_table(t)
         if type(v) == 'table' then
             v = '{'..dump_table(v)..'}'
         end
-        push(p, k..":"..(v or nil))
+        push(p, k..":"..(v or "<nil>"))
     end
     return join(p, " ,")
 end
@@ -76,10 +76,8 @@ end
 local function decode_seq_parameter_set(nal_unit, i)
 
     local sps = {}
-    sps.profile_idc, sps.constaint_f, sps.level_idc = ord(nal_unit, i, i+3)
-    i, b, sps.id = get_ue_golomb(nal_unit, i+4, 0)
-
-    io.stderr:write("SPS:\t",dump_table(sps),"\n")
+    sps.profile_idc, sps.constaint_f, sps.level_idc = ord(nal_unit, i, i+2)
+    i, b, sps.sps_id = get_ue_golomb(nal_unit, i+3, 0)
 
     if sps.profile_idc == 100 or
        sps.profile_idc == 110 or

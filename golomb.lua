@@ -6,7 +6,7 @@ local function get_golomb(data, i, bit_start)
     local nrbits, rb_v, rb_c, nr = nil, 0, 0, 0
     while 1 do
         local v = ord(data, i, i)
-        for b=bit_start,7 do
+        for b=7-bit_start,0,-1 do
             ----[[
             print(
                 "before i:"..i..",v:"..v..",b:"..b..
@@ -40,7 +40,7 @@ local function get_golomb(data, i, bit_start)
                 b = b + 1
                 rb_v = 2^nrbits - 1 + rb_v
                 print("golomb:i:",i,",b:",b,",v:",rb_v)
-                return i, b, rb_v
+                return i, 7-b, rb_v
             end
         end
         i = i + 1
