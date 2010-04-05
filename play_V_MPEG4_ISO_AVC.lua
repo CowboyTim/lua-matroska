@@ -228,29 +228,59 @@ local function decode_seq_parameter_set(s)
     return sps
 end
 
+local function nal_unit_header_svc_extension(s)
+    local svc = {}
+    svc.idr_flag                 = get_bit(s)
+    svc.priority_id              = read_bits(s,6)
+    svc.no_inter_layer_pred_flag = get_bit(s)
+    svc.dependency_id            = read_bits(s,3)
+    svc.quality_id               = read_bits(s,4)
+    svc.temporal_id              = read_bits(s,3)
+    svc.use_ref_base_pic_flag    = get_bit(s)
+    svc.discarable_flag          = get_bit(s)
+    svc.output_flag              = get_bit(s)
+    local reserved_three_2bits   = read_bits(s,3)
+    return svc
+end
+
+local function nal_unit_header_mvc_extension(s)
+    local mvc = {}
+    mvc.non_idr_flag        = get_bit(s)
+    mvc.priority_id         = read_bits(s,6)
+    mvc.view_id             = read_bits(s,10)
+    mvc.temporal_id         = read_bits(s,3)
+    mvc.anchor_pic_flag     = get_bit(s)
+    mvc.inter_view_flag     = get_bit(s)
+    local reserverd_one_bit = get_bit(s)
+    return mvc
+end
+
 function PlayC:write(_, nal_unit)
     io.stderr:write("NAL data length:"..#(nal_unit).."\n")
     local get_bit, s = bit.iterator(nal_unit)
 
+    local header = {}
+
     -- determine main nal_unit_type
     local forbidden_zero_bit = get_bit(s)
-    local nal_ref_idc        = read_bits(s, 2)
-    local nal_unit_type      = read_bits(s, 5)
+    header.nal_ref_idc       = read_bits(s, 2)
+    header.nal_unit_type     = read_bits(s, 5)
     io.stderr:write(
-        "nal_ref_idc:\t",     nal_ref_idc   or "<nil>",
-        "\tnal_unit_type:\t", nal_unit_type or "<nil>", "\n"
+        "nal_ref_idc:\t",     header.nal_ref_idc   or "<nil>",
+        "\tnal_unit_type:\t", header.nal_unit_type or "<nil>", "\n"
     )
 
-    if nal_unit_type == 14 or nal_unit_type == 20 then
-        -- FIXME: parse svc_extension and mvc_extension
-        io.stderr:write("SVC/MVC not yet supported")
-
-        -- both are 3 bytes wide though, we skip.
-        read_bits(s,3*8)
+    if header.nal_unit_type == 14 or header.nal_unit_type == 20 then
+        header.svc_extension_flag = get_bit(s) 
+        if header.svc_extension_flag then
+            header.svc_extension = nal_unit_header_svc_extension(s)
+        else
+            header.mvc_extension = nal_unit_header_mvc_extension(s)
+        end
     end
 
     -- start decoding the rbsp data itself
-    if nal_unit_type == 7 then
+    if header.nal_unit_type == 7 then
         self.sps = decode_seq_parameter_set(s)
     end
 
