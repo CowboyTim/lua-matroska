@@ -37,9 +37,9 @@ local function hrd_parameters(s)
     hrd.cpb_cnt_minus1 = get_ue_golomb(s)
     hrd.bit_rate_scale = read_bits(s,4)
     hrd.cpb_size_scale = read_bits(s,4)
-    hrd,bit_rate_value_minus1 = {}
-    hrd,cpb_size_value_minus1 = {}
-    hrd,cpb_flag              = {}
+    hrd.bit_rate_value_minus1 = {}
+    hrd.cpb_size_value_minus1 = {}
+    hrd.cpb_flag              = {}
     for j=1,hrd.cpb_cnt_minus1+1 do
         hrd.bit_rate_value_minus1[j] = get_ue_golomb(s)
         hrd.cpb_size_value_minus1[j] = get_ue_golomb(s)
