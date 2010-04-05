@@ -7,39 +7,14 @@ local bit = require("bit")
 local ord    = string.byte
 local substr = string.sub
 local round  = math.modf
-local ceil   = math.ceil
 local join   = table.concat
 local push   = table.insert
 
-local get_golomb = bit.get_golomb
-local get_ue_golomb = get_golomb
-
-local function read_bits(byte, from, to)
-    local s = 0
-    for i=from,to do
-        local b = 2^i
-        --s = ((byte%(b*2) >= b) and s + b) or s
-        if byte%(b*2) >= b then
-            s = s + b
-        end
-    end
-    s, _ = round(s/(2^from))
-    return s
-end
-
-local function get_se_golomb(data, i, b)
-    io.stderr:write("get_se_golomb:i:"..i..",b:"..b.."\n")
-    local i, b, v = get_golomb(data, i, b)
-    return i, b, -1^(v+1)* ceil(v/2)
-end
-
-local function get_bit(data, i, bit, nrbits)
-    if bit == 7 then
-        i = i + 1
-    end
-    local byte = ord(data, i, i)
-    return i, bit == 7 and 0 or bit + 1, ((byte%(2^bit) >= 2^(bit-1)) and 1) or 0
-end
+local get_golomb    = bit.get_golomb
+local get_ue_golomb = bit.get_ue_golomb
+local get_se_golomb = bit.get_se_golomb
+local get_bit       = bit.get_bit
+local read_bits     = bit.read_bits
 
 local function scaling_list(data, i, b, size)
     local lastscale, nextscale, sl, defaultscalematrixflag = 8, 8, {}, 0
