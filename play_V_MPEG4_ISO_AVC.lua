@@ -163,9 +163,10 @@ local function decode_seq_parameter_set(s)
         sps.seq_scaling_matrix_present_flag      = get_bit(s)
         if sps.seq_scaling_matrix_present_flag then
             sps.seq_scaling_list_present_flag = {}
-            for j=1, (sps.chroma_format_idc == 3 and 12 or 8) do
+            for j=1, (sps.chroma_format_idc ~= 3 and 8 or 12) do
                 sps.seq_scaling_list_present_flag[j] = get_bit(s)
                 if sps.seq_scaling_list_present_flag[j] then
+                    -- copy/paste a bit
                     if j < 7 then   -- LUA array 1, see for j=1
                         sps.scalinglist4x4 = sps.scalinglist4x4 or {}
                         sps.defscaling4x4  = sps.defscaling4x4  or {}
@@ -255,6 +256,90 @@ local function nal_unit_header_mvc_extension(s)
     return mvc
 end
 
+local function pic_parameter_set(s, sps)
+    local pic = {}
+    pic.pic_parameter_set_id     = get_ue_golomb(s)
+    pic.seq_parameter_set_id     = get_ue_golomb(s)
+    pic.entropy_coding_mode_flag = get_bit(s)
+    pic.bottom_field_pic_order_in_frame_present_flag
+                                 = get_bit(s)
+    pic.num_slice_groups_minus1  = get_ue_golomb(s)
+    if pic.num_slice_groups_minus1 > 0 then
+        pic.slice_group_map_type = get_ue_golomb(s)
+        if     pic.slice_group_map_type == 0 then
+            pic.run_length_minus1 = {}
+            for j=1,pic.num_slice_groups_minus1+1 do
+                pic.run_length_minus1[j] = get_ue_golomb(s)
+            end
+        elseif pic.slice_group_map_type == 2 then
+            pic.top_left    = {}
+            pic.bottom_left = {}
+            for j=1,pic.num_slice_groups_minus1 do
+                pic.top_left[j]    = get_ue_golomb(s)
+                pic.bottom_left[j] = get_ue_golomb(s)
+            end
+        elseif pic.slice_group_map_type == 3
+            or pic.slice_group_map_type == 4
+            or pic.slice_group_map_type == 5 then
+            pic.slice_group_change_direction_flag = get_bit(s)
+            pic.slice_group_change_rate_minus1    = get_ue_golomb(s)
+        elseif pic.slice_group_map_type == 6 then
+            pic.pic_size_in_map_units_minus1 = get_ue_golomb(s)
+            pic.slice_group_id = {}
+            for j=1,pic.pic_size_in_map_units_minus1+1 do
+                pic.slice_group_id[j] = get_bit(s)
+            end
+        end
+    end
+
+    pic.num_ref_idx_l0_default_active_minus1   = get_ue_golomb(s)
+    pic.num_ref_idx_l1_default_active_minus1   = get_ue_golomb(s)
+    pic.weighted_pred_flag                     = get_bit(s)
+    pic.weighted_bipred_idc                    = read_bits(s,2)
+    pic.init_qp_minus26                        = get_se_golomb(s)
+    pic.init_qs_minus26                        = get_se_golomb(s)
+    pic.chroma_qp_index_offset                 = get_se_golomb(s)
+    pic.deblocking_filter_control_present_flag = get_bit(s)
+    pic.constrained_intra_pred_flag            = get_bit(s)
+    pic.redundant_pic_cnt_present_flag         = get_bit(s)
+
+    pic.transform_8x8_mode_flag = get_bit(s)
+    if pic.transform_8x8_mode_flag then
+        pic.pic_scaling_matrix_present_flag = get_bit(s)
+        if pic.pic_scaling_matrix_present_flag then
+            pic.pic_scaling_list_present_flag = {}
+            for j=1,6
+                    +(pic.transform_8x8_mode_flag and 1 or 0)
+                    *(sps.chroma_format_idc ~= 3 and 2 or 6) do
+                pic.pic_scaling_list_present_flag[j] = get_bit(s)
+                if pic.pic_scaling_list_present_flag[j] then
+                    -- copy/paste a bit
+                    if j < 7 then   -- LUA array 1, see for j=1
+                        pic.scalinglist4x4 = pic.scalinglist4x4 or {}
+                        pic.defscaling4x4  = pic.defscaling4x4  or {}
+                        pic.scalinglist4x4[j],   pic.defscaling4x4[j]
+                            = scaling_list(s, 16)
+                    else
+                        pic.scalinglist8x8 = pic.scalinglist8x8 or {}
+                        pic.defscaling8x8  = pic.defscaling8x8  or {}
+                        pic.scalinglist8x8[j-7], pic.defscaling8x8[j-7] 
+                            = scaling_list(s, 64)
+                    end
+                end
+            end
+        end
+        pic.second_chroma_qp_index_offset = get_se_golomb(s)
+    end
+    io.stderr:write("PIC:\t",dump_table(pic),"\n")
+    return pic
+end
+
+local function sei_rbsp(s)
+    local sei = {}
+    -- FIXME
+    return sei
+end
+
 function PlayC:write(_, nal_unit)
     io.stderr:write("NAL data length:"..#(nal_unit).."\n")
     local get_bit, s = bit.iterator(nal_unit)
@@ -278,8 +363,12 @@ function PlayC:write(_, nal_unit)
     end
 
     -- start decoding the rbsp data itself
-    if nal_unit_type == 7 then
-        self.sps = decode_seq_parameter_set(s)
+    if     nal_unit_type == 7 then
+        self.sps     = decode_seq_parameter_set(s)
+    elseif nal_unit_type == 8 then
+        self.pic_set = pic_parameter_set(s, self.sps)
+    elseif nal_unit_type == 6 then
+        self.sei     = sei_rbsp(s)
     end
 
 end
