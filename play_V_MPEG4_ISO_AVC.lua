@@ -259,28 +259,26 @@ function PlayC:write(_, nal_unit)
     io.stderr:write("NAL data length:"..#(nal_unit).."\n")
     local get_bit, s = bit.iterator(nal_unit)
 
-    local header = {}
-
     -- determine main nal_unit_type
     local forbidden_zero_bit = get_bit(s)
-    header.nal_ref_idc       = read_bits(s, 2)
-    header.nal_unit_type     = read_bits(s, 5)
+    local nal_ref_idc        = read_bits(s, 2)
+    local nal_unit_type      = read_bits(s, 5)
     io.stderr:write(
-        "nal_ref_idc:\t",     header.nal_ref_idc   or "<nil>",
-        "\tnal_unit_type:\t", header.nal_unit_type or "<nil>", "\n"
+        "nal_ref_idc:\t",     nal_ref_idc   or "<nil>",
+        "\tnal_unit_type:\t", nal_unit_type or "<nil>", "\n"
     )
 
-    if header.nal_unit_type == 14 or header.nal_unit_type == 20 then
-        header.svc_extension_flag = get_bit(s) 
-        if header.svc_extension_flag then
-            header.svc_extension = nal_unit_header_svc_extension(s)
+    if nal_unit_type == 14 or nal_unit_type == 20 then
+        svc_extension_flag = get_bit(s) 
+        if svc_extension_flag then
+            self.svc_extension = nal_unit_header_svc_extension(s)
         else
-            header.mvc_extension = nal_unit_header_mvc_extension(s)
+            self.mvc_extension = nal_unit_header_mvc_extension(s)
         end
     end
 
     -- start decoding the rbsp data itself
-    if header.nal_unit_type == 7 then
+    if nal_unit_type == 7 then
         self.sps = decode_seq_parameter_set(s)
     end
 
