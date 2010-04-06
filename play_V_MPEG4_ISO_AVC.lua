@@ -16,6 +16,13 @@ local get_se_golomb = bit.get_se_golomb
 local get_bit       = bit.get_bit
 local read_bits     = bit.read_bits
 
+local P  = 0
+local B  = 1
+local I  = 2
+local SP = 3
+local SI = 4
+local SI = 5
+
 local function scaling_list(s, size)
     local lastscale, nextscale, sl, defaultscalematrixflag = 8, 8, {}, 0
     local deltascale
@@ -224,7 +231,7 @@ local function decode_seq_parameter_set(s)
         sps.vui_parameters = vui_parameters(s)
     end
 
-    io.stderr:write("SPS:\t",dump_table(sps),"\n")
+    print("SPS:\t",dump_table(sps),"\n")
     
     return sps
 end
@@ -330,7 +337,7 @@ local function pic_parameter_set(s, sps)
         end
         pic.second_chroma_qp_index_offset = get_se_golomb(s)
     end
-    io.stderr:write("PIC:\t",dump_table(pic),"\n")
+    print("PIC:\t",dump_table(pic),"\n")
     return pic
 end
 
@@ -349,7 +356,7 @@ local handle_sei = {
         s.b = 0
         s.i = s.i + sei.payloadSize
 
-        io.stderr:write(
+        print(
             "sei.uuid_iso_iec_11578\t",#(sei.uuid_iso_iec_11578),
             "\tsei.user_data_payload_byte\t",#(sei.user_data_payload_byte),
             "\ti:\t",s.i,"\tb:\t",s.b,"\n"
@@ -390,7 +397,7 @@ local function sei_rbsp(s)
         if sei_handler ~= nil then
             sei_handler(s, sei)
         else
-            io.stderr:write("SEI Type\t", sei.payloadType, "\t not supported\n")
+            print("SEI Type\t", sei.payloadType, "\t not supported\n")
         end
 
         -- make byte aligned, NOTE: have extra byte here, wich is 0x80, which
@@ -401,21 +408,143 @@ local function sei_rbsp(s)
             v = get_bit(s)
         end
 
-        io.stderr:write("SEI:\t",dump_table(sei),"\n")
+        print("SEI:\t",dump_table(sei),"\n")
     end
     
     return sei
 end
 
+function slice_data(s)
+    -- TODO
+end
+
+function PlayC:slice_layer_without_partitioning_rbsp(s, nal_unit_type, nal_ref_idc, is_idr)
+    local header = self:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
+    return slice_data(s, header)
+end
+
+function ref_pic_list_modification(s)
+    -- TODO
+end
+
+function dec_ref_pic_marking(s)
+    -- TODO
+end
+
+function pred_weight_table(s)
+    -- TODO
+end
+
+function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
+    local h = {}
+    h.first_mb_in_slice    = get_ue_golomb(s)
+    h.slice_type           = get_ue_golomb(s)
+    h.pic_parameter_set_id = get_ue_golomb(s)
+    if self.sps.seperate_colour_plane_flag == 1 then
+        h.colour_plane_id = read_bits(s, 2)
+    end
+    h.frame_num            = get_ue_golomb(s)  -- u(v) ?
+
+    if self.sps.frame_mbs_only_flag then
+        h.field_pic_flag = get_bit(s)
+        if h.field_pic_flag then
+            h.bottom_field_flag = get_bit(s)
+        end
+    end
+
+    if is_idr then
+        h.idr_pic_id = get_ue_golomb(s)
+    end
+
+    if self.sps.pic_order_cnt_type == 0 then
+        h.pic_order_cnt_lsb = get_ue_golomb(s)
+        if self.pic.bottom_field_pic_order_in_frame_present_flag 
+            and not h.field_pic_flag then
+            h.delta_pic_order_cnt_bottom = get_se_golomb(s)
+        end
+    elseif self.sps.pic_order_cnt_type == 1 
+        and not self.sps.delta_pic_always_zero_flag then
+        h.delta_pic_order_cnt = {}
+        h.delta_pic_order_cnt[1] = get_se_golomb(s)
+        if self.pic.bottom_field_pic_order_in_frame_present_flag 
+            and not h.field_pic_flag then
+            h.delta_pic_order_cnt[2] = get_se_golomb(s)
+        end
+    end
+
+    if self.pic.redundant_pic_cnt_present_flag then
+        h.redundant_pic_cnt = get_ue_golomb(s)
+    end
+
+    if     h.slice_type == B then
+        h.direct_spatial_mv_pred_flag = get_bit(s)
+    elseif h.slice_type == P or h.slice_type == SP or h.slice_type == B then
+        h.num_ref_idx_active_override_flag = get_bit(s)
+        if h.num_ref_idx_active_override_flag then
+            h.num_ref_idx_l0_active_minus1 = get_ue_golomb(s)
+            if h.slice_type == B then
+                h.num_ref_idx_l1_active_minus1 = get_ue_golomb(s)
+            end
+        end
+    end
+
+    if nal_unit_type == 20 then
+        -- TODO
+        ref_pic_list_mvc_modification(s)
+    else
+        ref_pic_list_modification(s)
+    end
+
+    if     (self.pic.weighted_pred_flag and 
+            (h.slice_type == P or h.slice_type == SP))
+        or (self.pic.weighted_bipred_idc == 1 and h.slice_type == B) 
+    then
+        pred_weight_table(s)
+    end
+
+    if nal_ref_idc ~= 0 then
+        dec_ref_pic_marking(s)
+    end
+
+    if      self.pic.entropy_coding_mode_flag    
+        and h.slice_type ~= I 
+        and h.slice_type ~= SI then
+        h.cabac_init_idc = get_ue_golomb(s)
+    end
+
+    h.slice_qp_data = get_se_golomb(s)
+    if h.slice_ype == SP or h.slice_type == SI then
+        if h.slice_type == SP then
+            h.sp_for_switch_flag = get_bit(s)
+        end
+        h.slice_qs_data = get_se_golomb(s)
+    end
+
+    if self.pic.deblocking_filter_control_present_flag then
+        h.disable_deblocking_filter_idc = get_ue_golomb(s)
+        if h.disable_deblocking_filter_idc ~= 1 then
+            h.slice_alpha_c0_offset_div2 = get_se_golomb(s)
+            h.slice_beta_offset_div2     = get_se_golomb(s)
+        end
+    end
+
+    if      self.pic.num_slice_groups_minus1 > 0
+        and self.pic.slice_group_map_type >= 3
+        and self.pic.slice_group_map_type <= 5 then
+        h.slice_group_change_cycle = get_ue_golomb(s)
+    end
+    return h
+end
+
 function PlayC:write(_, nal_unit)
-    io.stderr:write("NAL data length:"..#(nal_unit).."\n")
+    print("NAL data length:"..#(nal_unit).."\n")
     local get_bit, s = bit.iterator(nal_unit)
 
     -- determine main nal_unit_type
     local forbidden_zero_bit = get_bit(s)
     local nal_ref_idc        = read_bits(s, 2)
     local nal_unit_type      = read_bits(s, 5)
-    io.stderr:write(
+    print(
         "nal_ref_idc:\t",     nal_ref_idc   or "<nil>",
         "\tnal_unit_type:\t", nal_unit_type or "<nil>", "\n"
     )
@@ -430,10 +559,18 @@ function PlayC:write(_, nal_unit)
     end
 
     -- start decoding the rbsp data itself
-    if     nal_unit_type == 7 then
+    if     nal_unit_type == 1 then
+        self:slice_layer_without_partitioning_rbsp(
+            s, nal_unit_type, nal_ref_idc, false
+        )
+    elseif nal_unit_type == 5 then
+        self:slice_layer_without_partitioning_rbsp(
+            s, nal_unit_type, nal_ref_idc, true
+        )
+    elseif nal_unit_type == 7 then
         self.sps     = decode_seq_parameter_set(s)
     elseif nal_unit_type == 8 then
-        self.pic_set = pic_parameter_set(s, self.sps)
+        self.pic     = pic_parameter_set(s, self.sps)
     elseif nal_unit_type == 6 then
         self.sei     = sei_rbsp(s)
     end
