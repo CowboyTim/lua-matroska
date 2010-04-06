@@ -133,7 +133,7 @@ local function dump_table(t)
         end
         push(p, k..":"..(v or "<nil>"))
     end
-    return join(p, " ,")
+    return join(p, ", ")
 end
 
 local function decode_seq_parameter_set(s)
@@ -334,9 +334,76 @@ local function pic_parameter_set(s, sps)
     return pic
 end
 
+local handle_sei = {
+    ["5"] = function (s, sei)
+        
+        -- get UUID: 16 bytes
+        sei.uuid_iso_iec_11578
+            = substr(s.data, s.i, s.i+15)
+
+        -- get the user data: payloadSize - 16 
+        sei.user_data_payload_byte
+            = substr(s.data, s.i+16, s.i+sei.payloadSize -1)
+
+        -- set the bit iterator ok again
+        s.b = 0
+        s.i = s.i + sei.payloadSize
+
+        io.stderr:write(
+            "sei.uuid_iso_iec_11578\t",#(sei.uuid_iso_iec_11578),
+            "\tsei.user_data_payload_byte\t",#(sei.user_data_payload_byte),
+            "\ti:\t",s.i,"\tb:\t",s.b,"\n"
+        )
+        return
+    end,
+}
+
 local function sei_rbsp(s)
-    local sei = {}
-    -- FIXME
+
+    -- NOTE: basically, we start byte_aligned() here
+         
+    while true do 
+
+        local sei = {}
+        sei.payloadType, sei.payloadSize = 0, 0
+
+        -- payloadType
+        v = read_bits(s, 8)
+        if v == nil then break end
+        while true do
+            sei.payloadType = sei.payloadType + v
+            if v ~= 255 then break end
+            v = read_bits(s, 8)
+        end
+        
+        -- payloadSize
+        v = read_bits(s, 8)
+        if v == nil then break end
+        while true do
+            sei.payloadSize = sei.payloadSize + v
+            if v ~= 255 then break end
+            v = read_bits(s, 8)
+        end
+
+        -- handle that data according to the SEI payloadType
+        local sei_handler = handle_sei[tostring(sei.payloadType)]
+        if sei_handler ~= nil then
+            sei_handler(s, sei)
+        else
+            io.stderr:write("SEI Type\t", sei.payloadType, "\t not supported\n")
+        end
+
+        -- make byte aligned, NOTE: have extra byte here, wich is 0x80, which
+        -- happens to be the 10000000 bit string we 'need' according to the
+        -- specs, however, we are allready byte_aligned here, so we don't need
+        -- do anything here. What's going on?!
+        if s.b ~= 0 then
+            v = get_bit(s)
+        end
+
+        io.stderr:write("SEI:\t",dump_table(sei),"\n")
+    end
+    
     return sei
 end
 
