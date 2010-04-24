@@ -231,6 +231,12 @@ local function decode_seq_parameter_set(s)
         sps.vui_parameters = vui_parameters(s)
     end
 
+    if sps.seperate_colour_plane_flag then
+        sps.ChromaArrayType = 0
+    else
+        sps.ChromaArrayType = sps.chroma_format_idc
+    end
+
     print("SPS:\t",dump_table(sps),"\n")
     
     return sps
@@ -414,7 +420,7 @@ local function sei_rbsp(s)
     return sei
 end
 
-function slice_data(s)
+local function slice_data(s)
     -- TODO
 end
 
@@ -423,16 +429,120 @@ function PlayC:slice_layer_without_partitioning_rbsp(s, nal_unit_type, nal_ref_i
     return slice_data(s, header)
 end
 
-function ref_pic_list_modification(s)
-    -- TODO
+local function _mod_list(s, r)
+    local modification_of_pic_nums_idc
+    repeat
+        modification_of_pic_nums_idc = get_ue_golomb(s)
+        if     modification_of_pic_nums_idc == 0
+            or modification_of_pic_nums_idc == 1 then
+            r.abs_diff_pic_num_minus1 = get_ue_golomb(s)
+        elseif modification_of_pic_nums_idc == 2 then
+            r.long_term_pic_num = get_ue_golomb(s) 
+        end
+    until modification_of_pic_nums_idc ~= 3
 end
 
-function dec_ref_pic_marking(s)
-    -- TODO
+local function ref_pic_list_modification(s, slice_type)
+    local r = {}
+    if slice_type % 5 ~= 2 and slice_type % 5 ~= 4 then
+        r.ref_pic_list_modification_flag_l0 = get_bit(s)
+        if r.ref_pic_list_modification_flag_l0 then
+            _mod_list(s, r)
+        end
+    end
+
+    if slice_type % 5 == 1 then
+        r.ref_pic_list_modification_flag_l1 = get_bit(s)
+        if r.ref_pic_list_modification_flag_l1 then
+            _mod_list(s, r)
+        end
+    end
+    return r
 end
 
-function pred_weight_table(s)
-    -- TODO
+local function dec_ref_pic_marking(s, IdrPicFlag)
+    local drpm = {}
+    if IdrPicFlag then
+        drpm.no_output_of_prior_pics_flag = get_bit(s)
+        drpm.long_term_reference_flag     = get_bit(s)
+    else
+        drpm.adaptive_ref_pic_marking_mode_flag = get_bit(s)
+        if drpm.adaptive_ref_pic_marking_mode_flag then
+            local memory_management_control_operation
+            repeat
+                memory_management_control_operation = get_ue_golomb(s)
+                if     memory_management_control_operation == 1
+                    or memory_management_control_operation == 3 then
+                    drpm.difference_of_pic_nums_minus1 = get_ue_golomb(s)
+                elseif memory_management_control_operation == 2 then
+                    drpm.long_term_pic_num = get_ue_golomb(s)
+                elseif memory_management_control_operation == 3
+                    or memory_management_control_operation == 6 then
+                    drpm.long_term_frame_idx = get_ue_golomb(s)
+                elseif memory_management_control_operation == 4 then
+                    drpm.max_long_term_frame_idx_plus1 = get_ue_golomb(s)
+                end
+            until memory_management_control_operation ~= 0
+        end
+    end
+    return drpm
+end
+
+local function _pred_weight_table(s, max, ChromaArrayType)
+    local luma_weight   = {}
+    local luma_offset   = {}
+    local chroma_weight = {}
+    local chroma_offset = {}
+    for i=1,max+1 do
+        local luma_weight_flag = get_bit(s)
+        if luma_weight_flag then
+            wt.luma_weight[i] = get_se_golomb(s)
+            wt.luma_offset[i] = get_se_golomb(s)
+        end
+        if ChromaArrayType ~= 0 then
+            local chroma_weight_flag = get_bit(s)
+            if chroma_weight_flag then
+                wt.chroma_weight[i] = {}
+                wt.chroma_offset[i] = {}
+                for j=1,2 do
+                    wt.chroma_weight[i][j] = get_se_golomb(s)
+                    wt.chroma_offset[i][j] = get_se_golomb(s)
+                end
+            end
+        end
+    end
+    return luma_weight, luma_offset, chroma_weight, chroma_offset
+end
+
+local function pred_weight_table(s, self)
+    local wt = {}
+
+    wt.luma_log2_weight_denom = get_ue_golomb(s)
+    if sps.ChromaArrayType ~= 0 then
+        wt.chroma_log2_weight_denom = get_ue_golomb(s)
+    end
+
+    wt.luma_weight_l0,
+    wt.luma_offset_l0,
+    wt.chroma_weight_l0,
+    wt.chroma_offset_l0 = _pred_weight_table(
+        s, 
+        self.header.num_ref_idx_l0_active_minus1,
+        self.sps.ChromaArrayType
+    )
+
+    if self.header.slice_type % 5 == 1 then
+        wt.luma_weight_l1,
+        wt.luma_offset_l1,
+        wt.chroma_weight_l1,
+        wt.chroma_offset_l1 = _pred_weight_table(
+            s, 
+            self.header.num_ref_idx_l1_active_minus1, 
+            self.sps.ChromaArrayType
+        )
+    end
+
+    return wt
 end
 
 function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
@@ -440,7 +550,8 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
     h.first_mb_in_slice    = get_ue_golomb(s)
     h.slice_type           = get_ue_golomb(s)
     h.pic_parameter_set_id = get_ue_golomb(s)
-    if self.sps.seperate_colour_plane_flag == 1 then
+    h.IdrPicFlag           = (nal_unit_type == 5)
+    if self.sps.seperate_colour_plane_flag then
         h.colour_plane_id = read_bits(s, 2)
     end
     h.frame_num            = get_ue_golomb(s)  -- u(v) ?
@@ -490,20 +601,20 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
 
     if nal_unit_type == 20 then
         -- TODO
-        ref_pic_list_mvc_modification(s)
+        h.rplmm = ref_pic_list_mvc_modification(s)
     else
-        ref_pic_list_modification(s)
+        h.rplm  = ref_pic_list_modification(s, h.slice_type)
     end
 
     if     (self.pic.weighted_pred_flag and 
             (h.slice_type == P or h.slice_type == SP))
         or (self.pic.weighted_bipred_idc == 1 and h.slice_type == B) 
     then
-        pred_weight_table(s)
+        pred_weight_table(s, self)
     end
 
     if nal_ref_idc ~= 0 then
-        dec_ref_pic_marking(s)
+        h.drpm = dec_ref_pic_marking(s, IdrPicFlag)
     end
 
     if      self.pic.entropy_coding_mode_flag    
