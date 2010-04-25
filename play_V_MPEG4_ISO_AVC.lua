@@ -240,10 +240,15 @@ local function decode_seq_parameter_set(s)
     sps.PicHeightInMapUnits = sps.pic_height_in_map_units_minus1 + 1
     sps.FrameHeightInMbs    = (2 - (sps.frame_mbs_only_flag and 1 or 0)) * sps.PicHeightInMapUnits
     sps.PicWidthInMbs       = sps.pic_width_in_mbs_minus1 + 1
+    sps.PicSizeInMapUnits   = sps.PicWidthInMbs * sps.PicHeightInMapUnits
 
     print("SPS:\t",dump_table(sps),"\n")
     
     return sps
+end
+
+local function min(a,b)
+    return a < b and a or b
 end
 
 local function nal_unit_header_svc_extension(s)
@@ -347,6 +352,7 @@ local function pic_parameter_set(s, sps)
         end
         pic.second_chroma_qp_index_offset = get_se_golomb(s)
     end
+
     print("PIC:\t",dump_table(pic),"\n")
     return pic
 end
@@ -716,6 +722,17 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
 
     self.sps.PicHeightInMbs = self.sps.FrameHeightInMbs/(1 + (h.field_pic_flag and 1 or 0))
     self.sps.PicSizeInMbs   = self.sps.PicWidthInMbs * self.sps.PicHeightInMbs
+
+    --[[
+    local MapUnitsInSliceGroup0 = min(
+        h.slice_group_change_cycle * (self.pic.slice_group_change_rate_minus1 + 1),
+        self.sps.PicSizeInMapUnits
+    )
+    local sizeOfUpperLeftGroup = self.pic.slice_group_change_direction_flag
+        and (self.sps.PicSizeInMapUnits - MapUnitsInSliceGroup0)
+        or  MapUnitsInSliceGroup0
+    --]]
+
     return h
 end
 
