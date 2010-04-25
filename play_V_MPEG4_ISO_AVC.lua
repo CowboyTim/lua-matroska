@@ -469,10 +469,10 @@ function PlayC:slice_data(s, header)
                 if CurrMbAddr ~= firstMbAddr or mb_skip_run > 0 then
                     moreDataFlag = more_rbsp_data(s) -- TODO
                 end
+            else
+                mb_skip_flag = get_ae(s) -- TODO
+                moreDataFlag = not mb_skip_flag
             end
-        else
-            mb_skip_flag = get_ae(s) -- TODO
-            moreDataFlag = not mb_skip_flag
         end
         if moreDataFlag then
             if     (CurrMbAddr % 2 == 0 and MbaffFrameFlag)
