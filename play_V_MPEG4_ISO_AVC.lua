@@ -2,7 +2,8 @@
 
 local PlayC = {}
 
-local bit = require("bit")
+local bit   = require("bit")
+local cabac = require("h264_cabac")
 
 local ord    = string.byte
 local substr = string.sub
@@ -15,6 +16,7 @@ local get_ue_golomb = bit.get_ue_golomb
 local get_se_golomb = bit.get_se_golomb
 local get_bit       = bit.get_bit
 local read_bits     = bit.read_bits
+local get_ae        = cabac.get_ae
 
 local P  = 0
 local B  = 1
