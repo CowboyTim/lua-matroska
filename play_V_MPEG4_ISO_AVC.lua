@@ -237,6 +237,10 @@ local function decode_seq_parameter_set(s)
         sps.ChromaArrayType = sps.chroma_format_idc
     end
 
+    sps.PicHeightInMapUnits = sps.pic_height_in_map_units_minus1 + 1
+    sps.FrameHeightInMbs    = (2 - (sps.frame_mbs_only_flag and 1 or 0)) * sps.PicHeightInMapUnits
+    sps.PicWidthInMbs       = sps.pic_width_in_mbs_minus1 + 1
+
     print("SPS:\t",dump_table(sps),"\n")
     
     return sps
@@ -359,8 +363,8 @@ local handle_sei = {
             = substr(s.data, s.i+16, s.i+sei.payloadSize -1)
 
         -- set the bit iterator ok again
-        s.b = 0
-        s.i = s.i + sei.payloadSize
+        s.bit = 7
+        s.i   = s.i + sei.payloadSize
 
         print(
             "sei.uuid_iso_iec_11578\t",#(sei.uuid_iso_iec_11578),
@@ -410,7 +414,7 @@ local function sei_rbsp(s)
         -- happens to be the 10000000 bit string we 'need' according to the
         -- specs, however, we are allready byte_aligned here, so we don't need
         -- do anything here. What's going on?!
-        if s.b ~= 0 then
+        if s.bit ~= 7 then
             v = get_bit(s)
         end
 
@@ -420,13 +424,78 @@ local function sei_rbsp(s)
     return sei
 end
 
-local function slice_data(s)
+function PlayC:macroblock_layer(s, header)
     -- TODO
+end
+
+function PlayC:NextMbAddr(n)
+    local i = n + 1
+    while i < self.sps.PicSizeInMbs and MbToSliceGroupMap[i] ~= MbToSliceGroupMap[n] do
+        i = i + 1
+    end
+    return i
+end
+
+function PlayC:slice_data(s, header)
+    io.stderr:write("slice_data\n")
+
+    -- TODO: implement further
+
+    if self.pic.entropy_coding_mode_flag then
+        while s.bit ~= 7 do
+            local v = get_bit(s)
+        end
+    end
+
+    local MbaffFrameFlag = self.sps.mb_adaptive_frame_field_flag and not header.field_pic_flag
+    local firstMbAddr    = header.first_mb_in_slice * (1 + (MbaffFrameFlag and 1 or 0))
+    local CurrMbAddr     = firstMbAddr
+    local moreDataFlag   = true
+    local prevMbSkipped  = false
+    repeat
+        if header.slice_type ~= I and header.slice_type ~= SI then
+            if not self.pic.entropy_coding_mode_flag then
+                mb_skip_run   = get_ue_golomb(s)
+                prevMbSkipped = mb_skip_flag > 0
+                for i=0,mb_skip_run do
+                    CurrMbAddr = self:NextMbAddr(CurrMbAddr) -- TODO
+                end
+                if CurrMbAddr ~= firstMbAddr or mb_skip_run > 0 then
+                    moreDataFlag = more_rbsp_data(s) -- TODO
+                end
+            end
+        else
+            mb_skip_flag = get_ae(s) -- TODO
+            moreDataFlag = not mb_skip_flag
+        end
+        if moreDataFlag then
+            if     (CurrMbAddr % 2 == 0 and MbaffFrameFlag)
+                or (CurrMbAddr % 2 == 1 and prevMbSkipped ) then
+                mb_field_decoding_flag = get_bit(s) -- TODO
+            end
+            self:macroblock_layer(s, header)
+        end
+        if not self.pic.entropy_coding_mode_flag then
+            moreDataFlag = more_rbsp_data(s) -- TODO
+        else
+            if header.slice_type ~= I and header.slice_type ~= SI then
+                prevMbSkipped = mb_skip_flag
+            end
+            if MbaffFrameFlag and CurrMbAddr % 2 == 0 then
+                moreDataFlag = 1
+            else
+                end_of_slice_flag = get_ae(s) -- TODO
+                moreDataFlag = not end_of_slice_flag
+            end
+        end
+        CurrMbAddr = self:NextMbAddr(CurrMbAddr) -- TODO
+    until not moreDataFlag
 end
 
 function PlayC:slice_layer_without_partitioning_rbsp(s, nal_unit_type, nal_ref_idc, is_idr)
     local header = self:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
-    return slice_data(s, header)
+    local data   = self:slice_data(s, header)
+    return header, data
 end
 
 local function _mod_list(s, r)
@@ -644,6 +713,9 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
         and self.pic.slice_group_map_type <= 5 then
         h.slice_group_change_cycle = get_ue_golomb(s)
     end
+
+    self.sps.PicHeightInMbs = self.sps.FrameHeightInMbs/(1 + (h.field_pic_flag and 1 or 0))
+    self.sps.PicSizeInMbs   = self.sps.PicWidthInMbs * self.sps.PicHeightInMbs
     return h
 end
 
