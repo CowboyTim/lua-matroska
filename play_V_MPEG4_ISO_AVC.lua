@@ -610,7 +610,7 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
             (h.slice_type == P or h.slice_type == SP))
         or (self.pic.weighted_bipred_idc == 1 and h.slice_type == B) 
     then
-        pred_weight_table(s, self)
+        h.pwt = pred_weight_table(s, self)
     end
 
     if nal_ref_idc ~= 0 then
