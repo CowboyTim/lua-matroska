@@ -7,16 +7,16 @@ local substr   = string.sub
 local ord      = string.byte
 
 local function write_nal(fh, data, where, size_size)
-    io.stderr:write(string.hex(data),"\n")
+    --io.stderr:write(string.hex(data),"\n")
     local start     = where + size_size
     local a = substr(data,where,start-1)
-    io.stderr:write("a:",string.hex(a),"\n")
+    --io.stderr:write("a:",string.hex(a),"\n")
     local size_end  = bunpack(a,">L")
     io.stderr:write("write_nal, start:\t",start, "\tend:",size_end,"\tsize_size:",size_size,"\n")
     if size_end > 0 then
         size_end = start + size_end
         local nal_str = substr(data,start,size_end -1)
-        io.stderr:write("write_in_nal\t",string.hex(nal_str),"\nend write_in_nal\n")
+        --io.stderr:write("write_in_nal\t",string.hex(nal_str),"\nend write_in_nal\n")
         fh:write('\000\000\000\001', nal_str)
         return size_end
     else
