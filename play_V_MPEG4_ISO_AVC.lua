@@ -435,6 +435,7 @@ function PlayC:macroblock_layer(s, header)
 end
 
 function PlayC:NextMbAddr(n)
+    -- TODO
     local i = n + 1
     while i < self.sps.PicSizeInMbs and MbToSliceGroupMap[i] ~= MbToSliceGroupMap[n] do
         i = i + 1
@@ -464,7 +465,7 @@ function PlayC:slice_data(s, header)
                 mb_skip_run   = get_ue_golomb(s)
                 prevMbSkipped = mb_skip_flag > 0
                 for i=0,mb_skip_run do
-                    CurrMbAddr = self:NextMbAddr(CurrMbAddr) -- TODO
+                    CurrMbAddr = self:NextMbAddr(CurrMbAddr)
                 end
                 if CurrMbAddr ~= firstMbAddr or mb_skip_run > 0 then
                     moreDataFlag = more_rbsp_data(s) -- TODO
@@ -494,7 +495,7 @@ function PlayC:slice_data(s, header)
                 moreDataFlag = not end_of_slice_flag
             end
         end
-        CurrMbAddr = self:NextMbAddr(CurrMbAddr) -- TODO
+        CurrMbAddr = self:NextMbAddr(CurrMbAddr)
     until not moreDataFlag
 end
 
