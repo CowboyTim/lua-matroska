@@ -706,7 +706,7 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
         if h.slice_type == SP then
             h.sp_for_switch_flag = get_bit(s)
         end
-        h.slice_qs_data = get_se_golomb(s)
+        h.slice_qs_delta = get_se_golomb(s)
     end
 
     if self.pic.deblocking_filter_control_present_flag then
