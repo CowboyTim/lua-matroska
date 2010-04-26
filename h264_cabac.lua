@@ -1031,8 +1031,9 @@ end
 -- TODO: check the >>4 shift right bit implementation with divide and ceil
 --       here
 cabac.init = function(pic, header)
-    local SliceQPy = 26 + pic.init_qp_minus26 + header.slice_qs_delta
+    local SliceQPy    = 26 + pic.init_qp_minus26 + header.slice_qs_delta
     local preCtxState = clip3(1, 126, ceil((m * clip3(0, 51, SliceQPy))/(2*2*2*2)) + n)
+    local valMPS, pStateIdx
     if preCtxState <= 63 then
         pStateIdx = 63 - preCtxState
         valMPS = 0
