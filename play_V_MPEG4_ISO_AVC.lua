@@ -7,7 +7,6 @@ local cabac = require("h264_cabac")
 
 local ord    = string.byte
 local substr = string.sub
-local round  = math.modf
 local join   = table.concat
 local push   = table.insert
 

@@ -8,7 +8,6 @@ _G[_REQUIREDNAME] = B
 
 
 local ord    = string.byte
-local round  = math.modf
 local ceil   = math.ceil
 
 B.get_bit = function (state)
