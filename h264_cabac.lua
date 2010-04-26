@@ -6,6 +6,8 @@ if _REQUIREDNAME == nil then
 end
 _G[_REQUIREDNAME] = cabac
 
+local ceil   = math.ceil
+
 local cci = {}
 
 cci[0] = {
@@ -1022,6 +1024,24 @@ end
 
 cci[70] = b
 
+local function clip3(x,y,z)
+    return z < x and x or (z > y and y) or z
+end
+
+-- TODO: check the >>4 shift right bit implementation with divide and ceil
+--       here
+cabac.init = function(pic, header)
+    local SliceQPy = 26 + pic.init_qp_minus26 + header.slice_qs_delta
+    local preCtxState = clip3(1, 126, ceil((m * clip3(0, 51, SliceQPy))/(2*2*2*2)) + n)
+    if preCtxState <= 63 then
+        pStateIdx = 63 - preCtxState
+        valMPS = 0
+    else
+        pStateIdx = preCtxState - 64
+        valMPS = 1
+    end
+    return pStateIdx, valMPS
+end
 
 cabac.get_ae = function(s)
     return cci
