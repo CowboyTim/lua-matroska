@@ -1044,8 +1044,4 @@ cabac.init = function(pic, header)
     return pStateIdx, valMPS
 end
 
-cabac.get_ae = function(s)
-    return cci
-end
-
 return cabac

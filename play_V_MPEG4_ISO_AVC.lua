@@ -17,12 +17,11 @@ local get_bit       = bit.get_bit
 local read_bits     = bit.read_bits
 local get_ae        = cabac.get_ae
 
-local P  = 0
-local B  = 1
-local I  = 2
-local SP = 3
-local SI = 4
-local SI = 5
+local P  = {[0] = true, [5] = true}
+local B  = {[1] = true, [6] = true}
+local I  = {[2] = true, [7] = true}
+local SP = {[3] = true, [8] = true}
+local SI = {[4] = true, [9] = true}
 
 local function scaling_list(s, size)
     local lastscale, nextscale, sl, defaultscalematrixflag = 8, 8, {}, 0
@@ -461,7 +460,7 @@ function PlayC:slice_data(s, header)
     local moreDataFlag   = true
     local prevMbSkipped  = false
     repeat
-        if header.slice_type ~= I and header.slice_type ~= SI then
+        if not I[header.slice_type] and not SI[header.slice_type] then
             if not self.pic.entropy_coding_mode_flag then
                 mb_skip_run   = get_ue_golomb(s)
                 prevMbSkipped = mb_skip_flag > 0
@@ -486,7 +485,7 @@ function PlayC:slice_data(s, header)
         if not self.pic.entropy_coding_mode_flag then
             moreDataFlag = more_rbsp_data(s) -- TODO
         else
-            if header.slice_type ~= I and header.slice_type ~= SI then
+            if not I[header.slice_type] and not SI[header.slice_type] then
                 prevMbSkipped = mb_skip_flag
             end
             if MbaffFrameFlag and CurrMbAddr % 2 == 0 then
@@ -623,6 +622,8 @@ local function pred_weight_table(s, self)
 end
 
 function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
+    print("slice_header\n")
+
     local h = {}
     h.first_mb_in_slice    = get_ue_golomb(s)
     h.slice_type           = get_ue_golomb(s)
@@ -664,13 +665,13 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
         h.redundant_pic_cnt = get_ue_golomb(s)
     end
 
-    if     h.slice_type == B then
+    if     B[h.slice_type] then
         h.direct_spatial_mv_pred_flag = get_bit(s)
-    elseif h.slice_type == P or h.slice_type == SP or h.slice_type == B then
+    elseif P[h.slice_type] or SP[h.slice_type] or B[h.slice_type] then
         h.num_ref_idx_active_override_flag = get_bit(s)
         if h.num_ref_idx_active_override_flag then
             h.num_ref_idx_l0_active_minus1 = get_ue_golomb(s)
-            if h.slice_type == B then
+            if B[h.slice_type] then
                 h.num_ref_idx_l1_active_minus1 = get_ue_golomb(s)
             end
         end
@@ -684,8 +685,8 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
     end
 
     if     (self.pic.weighted_pred_flag and 
-            (h.slice_type == P or h.slice_type == SP))
-        or (self.pic.weighted_bipred_idc == 1 and h.slice_type == B) 
+            (P[h.slice_type] or SP[h.slice_type]))
+        or (self.pic.weighted_bipred_idc == 1 and B[h.slice_type]) 
     then
         h.pwt = pred_weight_table(s, self)
     end
@@ -695,14 +696,14 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
     end
 
     if      self.pic.entropy_coding_mode_flag    
-        and h.slice_type ~= I 
-        and h.slice_type ~= SI then
+        and not  I[h.slice_type]
+        and not SI[h.slice_type] then
         h.cabac_init_idc = get_ue_golomb(s)
     end
 
     h.slice_qp_data = get_se_golomb(s)
-    if h.slice_ype == SP or h.slice_type == SI then
-        if h.slice_type == SP then
+    if SP[h.slice_type] or SI[h.slice_type] then
+        if SP[h.slice_type] then
             h.sp_for_switch_flag = get_bit(s)
         end
         h.slice_qs_delta = get_se_golomb(s)
@@ -735,6 +736,7 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
         or  MapUnitsInSliceGroup0
     --]]
 
+    print("SLICE_HEADER:\t",dump_table(h),"\n")
     return h
 end
 
