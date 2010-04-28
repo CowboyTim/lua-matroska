@@ -30,9 +30,9 @@ local timethese = require("benchmark")
 local cbunpack = string.unpack
 local lbunpack = string.mybunpack_in_lua
 
-timethese(1000000, {
+timethese(5000000, {
     ["lbunpack"] = function ()
-        local a = lbunpack('L', '\255\255\255\255')
+        local a = lbunpack('\255\255\255\255', 'L')
     end,
     ["cbunpack"] = function () 
         local a = cbunpack('\255\255\255\255', 'L')

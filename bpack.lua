@@ -7,32 +7,40 @@ local push     = table.insert
 local sprintf  = string.format
 local stringx  = string.rep
 
+local function _decode(v, str, i)
+    if     v == 'b' then
+        v = ord(str, i, i)
+        i = i+1
+    elseif v == 'L' then
+        v = {ord(str, i, i+3)}
+        v = 256 * ( 256 * ( 256 * v[1] + v[2] ) + v[2]) + v[4]
+        i = i+4
+    elseif v == 'Q' then
+        v = {ord(str, i, i+7)}
+        v = 256 * ( 
+            256 * ( 
+            256 * (
+            256 * ( 
+            256 * ( 
+            256 * ( 
+            256 * v[1] + v[2] ) + v[2]) + v[4] ) + v[5] ) + v[6]) + v[7]) + v[8]
+        i = i+8
+    end
+    return v, i
+end
+
 string.mybunpack_in_lua = function(str, format)
+
+    if #(format) == 1 then
+        local v, _ = _decode(format, str, 1) 
+        return v
+    end
 
     local i = 1
     local v
     local t = {}
     for k=1,#(format) do
-        v = substr(format,k,k)
-        if     v == 'b' then
-            v = ord(str, i, i)
-            i = i+1
-        elseif v == 'L' then
-            v = {ord(str, i, i+3)}
-            v = 256 * ( 256 * ( 256 * v[1] + v[2] ) + v[2]) + v[4]
-            i = i+4
-            
-        elseif v == 'Q' then
-            v = {ord(str, i, i+7)}
-            v = 256 * ( 
-                256 * ( 
-                256 * (
-                256 * ( 
-                256 * ( 
-                256 * ( 
-                256 * v[1] + v[2] ) + v[2]) + v[4] ) + v[5] ) + v[6]) + v[7]) + v[8]
-            i = i+8
-        end
+        v, i = _decode(substr(format,k,k), str, i)
         push(t,v)
     end
 
