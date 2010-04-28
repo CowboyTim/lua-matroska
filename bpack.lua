@@ -14,7 +14,7 @@ local function dump(t)
 end
 
 
-local function mybunpack_in_lua(format, str)
+string.mybunpack_in_lua = function(format, str)
 
     local i = 1
     local v
