@@ -7,14 +7,7 @@ local push     = table.insert
 local sprintf  = string.format
 local stringx  = string.rep
 
-local function dump(t)
-    for i,v in ipairs(t) do
-        print(i..':'..v)
-    end
-end
-
-
-string.mybunpack_in_lua = function(format, str)
+string.mybunpack_in_lua = function(str, format)
 
     local i = 1
     local v
