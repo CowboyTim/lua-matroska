@@ -4,17 +4,19 @@ require("pack")
 local substr   = string.sub
 local ord      = string.byte
 local push     = table.insert
-local sprintf  = string.format
 local stringx  = string.rep
 
 local function _decode(v, str, i)
-    if     v == 'b' then
-        v = ord(str, i, i)
-        i = i+1
-    elseif v == 'L' then
-        v = {ord(str, i, i+3)}
-        v = 256 * ( 256 * ( 256 * v[1] + v[2] ) + v[3]) + v[4]
-        i = i+4
+    if     v == 'L' then
+        local v1 = ord(str, i)
+        i = i + 1
+        v1 = 256 * v1 + ord(str, i)
+        i = i + 1
+        v1 = 256 * v1 + ord(str, i)
+        i = i + 1
+        return 256 * v1 + ord(str, i), i + 1
+    elseif v == 'b' then
+        return ord(str, i, i), i+1
     elseif v == 'Q' then
         v = {ord(str, i, i+7)}
         v = 256 * ( 
@@ -24,9 +26,8 @@ local function _decode(v, str, i)
             256 * ( 
             256 * ( 
             256 * v[1] + v[2] ) + v[3]) + v[4] ) + v[5] ) + v[6]) + v[7]) + v[8]
-        i = i+8
+        return v, i + 8
     end
-    return v, i
 end
 
 string.mybunpack_in_lua = function(str, format)
@@ -44,7 +45,7 @@ string.mybunpack_in_lua = function(str, format)
         push(t,v)
     end
 
-    return t
+    return unpack(t)
 end
 
 local bunpack = string.unpack
