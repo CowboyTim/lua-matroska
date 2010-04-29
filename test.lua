@@ -50,6 +50,6 @@ timethese(10000000, {
         local a = lbunpack('\255\255\255\255', 'L')
     end,
     ["cbunpack"] = function () 
-        local a = cbunpack('\255\255\255\255', 'L')
+        local a = cbunpack('\255\255\255\255', '>L')
     end,
 })
