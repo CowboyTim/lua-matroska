@@ -32,9 +32,11 @@ end
 
 string.mybunpack_in_lua = function(str, format)
 
-    if #(format) == 1 then
-        local v, _ = _decode(format, str, 1) 
-        return v
+    if #(format) == 1 and format == 'L' then
+        local v1 = ord(str, 1)
+        v1 = 256 * v1 + ord(str, 2)
+        v1 = 256 * v1 + ord(str, 3)
+        return 256 * v1 + ord(str, 4)
     end
 
     local i = 1
