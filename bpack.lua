@@ -13,7 +13,7 @@ local function _decode(v, str, i)
         i = i+1
     elseif v == 'L' then
         v = {ord(str, i, i+3)}
-        v = 256 * ( 256 * ( 256 * v[1] + v[2] ) + v[2]) + v[4]
+        v = 256 * ( 256 * ( 256 * v[1] + v[2] ) + v[3]) + v[4]
         i = i+4
     elseif v == 'Q' then
         v = {ord(str, i, i+7)}
@@ -23,7 +23,7 @@ local function _decode(v, str, i)
             256 * ( 
             256 * ( 
             256 * ( 
-            256 * v[1] + v[2] ) + v[2]) + v[4] ) + v[5] ) + v[6]) + v[7]) + v[8]
+            256 * v[1] + v[2] ) + v[3]) + v[4] ) + v[5] ) + v[6]) + v[7]) + v[8]
         i = i+8
     end
     return v, i
