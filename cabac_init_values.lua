@@ -1,4 +1,4 @@
-return {
+local civ = {
 [0]    = {20  , -15 , nil , nil , nil , nil , nil , nil }, 
 [1]    = {2   , 54  , nil , nil , nil , nil , nil , nil }, 
 [2]    = {3   , 74  , nil , nil , nil , nil , nil , nil }, 
@@ -1020,3 +1020,22 @@ return {
 [1018] = {-10 , 90  , -8  , 87  , -9  , 91  , -11 , 91  }, 
 [1019] = {-30 , 127 , -23 , 126 , -31 , 127 , -30 , 127 }, 
 }
+
+local cci = {
+    m = {[-1] = {}, [0] = {}, [1] = {}, [2] = {}},
+    n = {[-1] = {}, [0] = {}, [1] = {}, [2] = {}}
+}
+
+for i=0,#(civ) do
+    local v = civ[i]
+    cci.m[-1][i] = v[1]
+    cci.n[-1][i] = v[2]
+    cci.m[0][i]  = v[3]
+    cci.n[0][i]  = v[4]
+    cci.m[1][i]  = v[5]
+    cci.n[1][i]  = v[6]
+    cci.m[2][i]  = v[7]
+    cci.n[2][i]  = v[8]
+end
+
+return cci

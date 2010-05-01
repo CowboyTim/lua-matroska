@@ -7,24 +7,7 @@ end
 _G[_REQUIREDNAME] = cabac
 
 local ceil = math.ceil
-local civ  = require("cabac_init_values")
-
-local cci = {
-    m = {[-1] = {}, [0] = {}, [1] = {}, [2] = {}},
-    n = {[-1] = {}, [0] = {}, [1] = {}, [2] = {}}
-}
-
-for i=0,#(civ) do
-    local v = civ[i]
-    cci.m[-1][i] = v[1]
-    cci.n[-1][i] = v[2]
-    cci.m[0][i]  = v[3]
-    cci.n[0][i]  = v[4]
-    cci.m[1][i]  = v[5]
-    cci.n[1][i]  = v[6]
-    cci.m[2][i]  = v[7]
-    cci.n[2][i]  = v[8]
-end
+local cci  = require("cabac_init_values")
 
 local function clip3(x,y,z)
     return z < x and x or (z > y and y) or z
