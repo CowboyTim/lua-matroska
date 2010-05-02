@@ -7,7 +7,7 @@ end
 _G[_REQUIREDNAME] = cabac
 
 local ceil = math.ceil
-local cci  = require("cabac_init_values")
+local cci, ctxIdxInit  = require("cabac_init_values")
 
 local function clip3(x,y,z)
     return z < x and x or (z > y and y) or z
@@ -29,16 +29,9 @@ local function cabac_init_context(pic, header, n, m)
     return pStateIdx, valMPS
 end
 
-local init = {
-    ["slice_data"]       = {cci[70], cci[71], cci[72]},
-    ["macroblock_layer"] = {cci[5]}
-}
-
 cabac.init = function(method, pic, header)
-    local n, m = n_m[header.slice_type][cabac_init_idc]()
-    return cabac_init_context(pic, header, n, m)
-end
+    local ctxIdxList = ctxIdxInit[method][header.slice_type]
 
-cabac.cci = cci
+end
 
 return cabac

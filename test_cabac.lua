@@ -1,7 +1,5 @@
 
-local c = require("h264_cabac")
-
-c=c.cci
+local c, _ = require("cabac_init_values")
 
 for i=0,#(c.m[0]) do 
     print("["..i.."]={"..

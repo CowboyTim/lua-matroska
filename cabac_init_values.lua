@@ -1042,4 +1042,12 @@ for i=0,#(civ) do
     cci.n[2][i]  = v[8]
 end
 
-return cci
+local ctxIdxInit = {slice_data = {}}
+ctxIdxInit.slice_data[0]      = {{11, 13}, {24, 26}, {70, 72}}
+ctxIdxInit.slice_data[1]      = ctxIdxInit.slice_data[0]
+ctxIdxInit.slice_data[3]      = ctxIdxInit.slice_data[0]
+ctxIdxInit.slice_data[4]      = {{70, 72}}
+ctxIdxInit.slice_data[2]      = ctxIdxInit.slice_data[4]
+
+
+return cci, ctxIdxInit
