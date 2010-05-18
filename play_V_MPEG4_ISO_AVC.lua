@@ -704,7 +704,7 @@ function PlayC:slice_header(s, nal_unit_type, nal_ref_idc, is_idr)
         h.cabac_init_idc = get_ue_golomb(s)
     end
 
-    h.slice_qp_data = get_se_golomb(s)
+    h.slice_qp_delta = get_se_golomb(s)
     if SP[h.slice_type] or SI[h.slice_type] then
         if SP[h.slice_type] then
             h.sp_for_switch_flag = get_bit(s)
