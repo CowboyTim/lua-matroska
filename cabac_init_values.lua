@@ -1042,12 +1042,26 @@ for i=0,#(civ) do
     cci.n[2][i]  = v[8]
 end
 
-local ctxIdxInit = {slice_data = {}}
-ctxIdxInit.slice_data[0]      = {{11, 13}, {24, 26}, {70, 72}}
-ctxIdxInit.slice_data[1]      = ctxIdxInit.slice_data[0]
-ctxIdxInit.slice_data[3]      = ctxIdxInit.slice_data[0]
-ctxIdxInit.slice_data[4]      = {{70, 72}}
-ctxIdxInit.slice_data[2]      = ctxIdxInit.slice_data[4]
+require("h264_constants")
+
+local P  = h264_constants.P
+local B  = h264_constants.B
+local I  = h264_constants.I
+local SP = h264_constants.SP
+local SI = h264_constants.SI
+
+local ctxIdx = {slice_data = {}}
+ctxIdx.slice_data[P]  = {["mb_skip_flag"]={11, 13}}
+ctxIdx.slice_data[B]  = {["mb_skip_flag"]={24, 26}}
+ctxIdx.slice_data[SI] = {["mb_field_decoding_flag"]={70, 72}}
+ctxIdx.slice_data[I]  = ctxIdx.slice_data[SI]
+ctxIdx.slice_data[P]  = ctxIdx.slice_data[SI]
+ctxIdx.slice_data[B]  = ctxIdx.slice_data[SI]
+ctxIdx.slice_data[SI] = {["mb_type"]={0,  10}}
+ctxIdx.slice_data[I]  = {["mb_type"]={3,  10}}
+ctxIdx.slice_data[P]  = {["mb_type"]={14, 20}}
+ctxIdx.slice_data[B]  = {["mb_type"]={27, 35}}
 
 
-return cci, ctxIdxInit
+
+return cci, ctxIdx
