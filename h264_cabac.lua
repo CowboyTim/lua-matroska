@@ -33,8 +33,15 @@ end
 cabac.init = function(method, pic, header, cabac_init_idc)
     local ctxIdx = ctxIdxInit[header.slice_type][method]
     for i=ctxIdx[1],ctxIdx[2] do
-        local n = cci.n[cabac_init_context][i]
-        local m = cci.m[cabac_init_context][i]
+        if I[header.slice_type] or SI[header.slice_type] then
+            cabac_init_idc = -1
+        end
+        if not cabac_init_idc then
+            -- FIXME: double check this
+            cabac_init_idc = -1
+        end
+        local n = cci.n[cabac_init_idc][i]
+        local m = cci.m[cabac_init_idc][i]
         local a, b = cabac_init_context(pic.init_qp_minus26, header.slice_qs_delta, n, m)
     end
 
