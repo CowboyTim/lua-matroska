@@ -31,22 +31,23 @@ end
 local function cabac_init_context(init_qp_minus26, slice_qp_delta, n, m)
     local SliceQPy    = 26 + init_qp_minus26 + slice_qp_delta
     local preCtxState = clip3(1, 126, ceil((m * clip3(0, 51, SliceQPy))/(2*2*2*2)) + n)
-    local valMPS, pStateIdx
     if preCtxState <= 63 then
-        pStateIdx = 63 - preCtxState
-        valMPS = 0
+        return 63 - preCtxState, 0
     else
-        pStateIdx = preCtxState - 64
-        valMPS = 1
+        return preCtxState - 64, 1
     end
-    return pStateIdx, valMPS
 end
 
 cabac.init = function(method, pic, header)
     io.stderr:write("slice_type:", header.slice_type, "\t", "method:",method,"\n")
+    if method == "end_of_slice_flag" then
+        -- i: 276
+        return 63, 0
+    end
     local cabac_init_idc = header.cabac_init_idc
     local ctxIdx = cabac.ctxIdx[header.slice_type][method]
     for i=ctxIdx[1],ctxIdx[2] do
+        io.stderr:write("cabac.init: ctxIdx:",i,"\n")
         if I[header.slice_type] or SI[header.slice_type] then
             cabac_init_idc = -1
         end

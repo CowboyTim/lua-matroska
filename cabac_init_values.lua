@@ -1052,16 +1052,12 @@ local SI = h264_constants.SI
 
 local ctxIdxInit = {}
 ctxIdxInit[P]  = {mb_skip_flag           = {11, 13},
-                  mb_type                = {14, 20},
-                  end_of_slice_flag      = {276, 276}}
+                  mb_type                = {14, 20}}
 ctxIdxInit[B]  = {mb_skip_flag           = {24, 26}, 
-                  mb_type                = {27, 35},
-                  end_of_slice_flag      = {276, 276}}
+                  mb_type                = {27, 35}}
 ctxIdxInit[SI] = {mb_field_decoding_flag = {70, 72},
-                  mb_type                = {0,  10},
-                  end_of_slice_flag      = {276, 276}}
-ctxIdxInit[I]  = {mb_type                = {3,  10},
-                  end_of_slice_flag      = {276, 276}}
+                  mb_type                = {0,  10}}
+ctxIdxInit[I]  = {mb_type                = {3,  10}}
 
 ctxIdxInit[SP] = ctxIdxInit[P]
 
