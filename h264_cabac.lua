@@ -1,9 +1,10 @@
 
-local cabac = {}
-
-if _REQUIREDNAME == nil then
-    _REQUIREDNAME = "cabac"
+local _REQUIREDNAME = "cabac"
+if _G[_REQUIREDNAME] then
+    return _G[_REQUIREDNAME]
 end
+
+local cabac = {}
 _G[_REQUIREDNAME] = cabac
 
 local ceil = math.ceil
