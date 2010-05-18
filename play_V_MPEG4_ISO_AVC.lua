@@ -474,7 +474,7 @@ function PlayC:slice_data(s, header)
                     moreDataFlag = more_rbsp_data(s) -- TODO
                 end
             else
-                mb_skip_flag = get_ae(s) -- TODO
+                mb_skip_flag = get_ae('mb_skip_flag', s, self.pic, header) -- TODO
                 moreDataFlag = not mb_skip_flag
             end
         end
@@ -494,7 +494,7 @@ function PlayC:slice_data(s, header)
             if MbaffFrameFlag and CurrMbAddr % 2 == 0 then
                 moreDataFlag = 1
             else
-                end_of_slice_flag = get_ae(s) -- TODO
+                end_of_slice_flag = get_ae('end_of_slice_flag', s, self.pic, header) -- TODO
                 moreDataFlag = not end_of_slice_flag
             end
         end

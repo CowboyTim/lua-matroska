@@ -1050,18 +1050,29 @@ local I  = h264_constants.I
 local SP = h264_constants.SP
 local SI = h264_constants.SI
 
-local ctxIdx = {slice_data = {}}
-ctxIdx.slice_data[P]  = {mb_skip_flag           = {11, 13},
-                         mb_type                = {14, 20}}
-ctxIdx.slice_data[B]  = {mb_skip_flag           = {24, 26}, 
-                         mb_type                = {27, 35}}
-ctxIdx.slice_data[SI] = {mb_field_decoding_flag = {70, 72},
-                         mb_type                = {0,  10}}
-ctxIdx.slice_data[I]  = {mb_type                = {3,  10}}
+local ctxIdxInit = {}
+ctxIdxInit[P]  = {mb_skip_flag           = {11, 13},
+                  mb_type                = {14, 20},
+                  end_of_slice_flag      = {276, 276}}
+ctxIdxInit[B]  = {mb_skip_flag           = {24, 26}, 
+                  mb_type                = {27, 35},
+                  end_of_slice_flag      = {276, 276}}
+ctxIdxInit[SI] = {mb_field_decoding_flag = {70, 72},
+                  mb_type                = {0,  10},
+                  end_of_slice_flag      = {276, 276}}
+ctxIdxInit[I]  = {mb_type                = {3,  10},
+                  end_of_slice_flag      = {276, 276}}
 
-ctxIdx.slice_data[SP] = ctxIdx.slice_data[P]
+ctxIdxInit[SP] = ctxIdxInit[P]
 
+local ctxIdx = {}
+for k,v in pairs(ctxIdxInit) do
+    for i, _ in pairs(k) do
+        ctxIdx[i] = v
+        io.stderr:write("II:",i,"\n")
+    end
+end
 
+local cabac_init = {["ctxIdx"] = ctxIdx, ["cci"] = cci}
 
-
-return cci, ctxIdx
+return cabac_init
