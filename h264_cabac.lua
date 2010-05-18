@@ -58,6 +58,7 @@ cabac.init = function(method, pic, header)
         local n = cabac.cci.n[cabac_init_idc][i]
         local m = cabac.cci.m[cabac_init_idc][i]
         local a, b = cabac_init_context(pic.init_qp_minus26, header.slice_qp_delta, n, m)
+        -- FIXME: a, b?!
     end
 
 end
