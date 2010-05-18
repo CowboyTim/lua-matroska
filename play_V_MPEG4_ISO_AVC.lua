@@ -17,11 +17,13 @@ local get_bit       = bit.get_bit
 local read_bits     = bit.read_bits
 local get_ae        = cabac.get_ae
 
-local P  = {[0] = true, [5] = true}
-local B  = {[1] = true, [6] = true}
-local I  = {[2] = true, [7] = true}
-local SP = {[3] = true, [8] = true}
-local SI = {[4] = true, [9] = true}
+require("h264_constants")
+
+local P  = h264_constants.P
+local B  = h264_constants.B
+local I  = h264_constants.I
+local SP = h264_constants.SP
+local SI = h264_constants.SI
 
 local function scaling_list(s, size)
     local lastscale, nextscale, sl, defaultscalematrixflag = 8, 8, {}, 0
@@ -459,6 +461,7 @@ function PlayC:slice_data(s, header)
     local CurrMbAddr     = firstMbAddr
     local moreDataFlag   = true
     local prevMbSkipped  = false
+    local mb_skip_flag, mb_skip_run
     repeat
         if not I[header.slice_type] and not SI[header.slice_type] then
             if not self.pic.entropy_coding_mode_flag then
